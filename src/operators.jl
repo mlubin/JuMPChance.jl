@@ -23,3 +23,7 @@ Base.convert(::Type{CCAffExpr},a::AffExpr) = CCAffExpr(IndepNormal[],AffExpr[],a
 # CCAffExpr--CCAffExpr
 # handled by GenericAffExpr fallback
 
+# comparison operators
+(<=)(lhs::CCAffExpr, rhs::Number) = ChanceConstr(lhs-rhs, :(<=), NaN)
+(>=)(lhs::CCAffExpr, rhs::Number) = ChanceConstr(lhs-rhs, :(>=), NaN)
+# == not valid

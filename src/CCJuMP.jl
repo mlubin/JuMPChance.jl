@@ -6,7 +6,10 @@ importall JuMP
 
 export CCModel,
     IndepNormal,
-    affToStr
+    affToStr,
+    getMean,
+    getVar,
+    @defIndepNormal
 
 
 # stores extension data inside JuMP Model
@@ -52,6 +55,16 @@ function IndepNormal(m::Model, mean, var, name::String)
     return IndepNormal(m, ccdata.numRVs)
 end
 
+function getMean(v::IndepNormal)
+    ccdata = getCCData(v.m)
+    return ccdata.RVmeans[v.idx]
+end
+
+function getVar(v::IndepNormal)
+    ccdata = getCCData(v.m)
+    return ccdata.RVvars[v.idx]
+end
+
 typealias CCAffExpr JuMP.GenericAffExpr{AffExpr,IndepNormal}
 
 CCAffExpr() = CCAffExpr(IndepNormal[],AffExpr[],AffExpr())
@@ -73,6 +86,36 @@ function affToStr(a::CCAffExpr)
     return string(join(strs," "), " + ", affToStr(a.constant,true))
 end
 
+type ChanceConstr
+    ccexpr::CCAffExpr
+    sense::Symbol # :(<=) or :(>=), right-hand side assumed to be zero
+    with_probability::Float64
+end
+
+function addConstraint(m::Model, constr::ChanceConstr; with_probability::Float64=NaN)
+    if !(0 < with_probability < 1)
+        error("Must specify with_probability between 0 and 1")
+    end
+    constr.with_probability = with_probability
+    
+    ccdata = getCCData(m)
+    push!(ccdata.chanceconstr, constr)
+
+end
+
+function conToStr(c::ChanceConstr)
+    s = "$(affToStr(c.ccexpr)) $(c.sense) 0"
+    if isnan(c.with_probability)
+        return s
+    else
+        return s*", with probability $(c.with_probability)"
+    end
+end
+
+Base.print(io::IO, a::ChanceConstr) = print(io, conToStr(a))
+Base.show( io::IO, a::ChanceConstr) = print(io, conToStr(a))
+
 include("operators.jl")
+include("macros.jl")
 
 end
