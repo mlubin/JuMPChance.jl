@@ -9,6 +9,8 @@ export CCModel,
     affToStr,
     getMean,
     getVar,
+    getStdev,
+    solvecc,
     @defIndepNormal
 
 
@@ -65,6 +67,8 @@ function getVar(v::IndepNormal)
     return ccdata.RVvars[v.idx]
 end
 
+getStdev(v::IndepNormal) = sqrt(getVar(v))
+
 typealias CCAffExpr JuMP.GenericAffExpr{AffExpr,IndepNormal}
 
 CCAffExpr() = CCAffExpr(IndepNormal[],AffExpr[],AffExpr())
@@ -89,7 +93,7 @@ end
 type ChanceConstr
     ccexpr::CCAffExpr
     sense::Symbol # :(<=) or :(>=), right-hand side assumed to be zero
-    with_probability::Float64
+    with_probability::Float64 # with this probability *or less*
 end
 
 function addConstraint(m::Model, constr::ChanceConstr; with_probability::Float64=NaN)
@@ -117,5 +121,6 @@ Base.show( io::IO, a::ChanceConstr) = print(io, conToStr(a))
 
 include("operators.jl")
 include("macros.jl")
+include("solve.jl")
 
 end
