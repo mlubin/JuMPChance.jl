@@ -1,11 +1,11 @@
 
 
-# Number
-# Number--IndepNormal
 for op in (:+, :-, :*)
     @eval begin
         ($op)(lhs::Union(Variable,Number), rhs::IndepNormal) = ($op)(convert(AffExpr,lhs),rhs)
+        ($op)(lhs::Variable, rhs::CCAffExpr) = ($op)(convert(AffExpr,lhs),rhs)
         ($op)(lhs::IndepNormal, rhs::Union(Variable,Number)) = ($op)(rhs,lhs)
+        ($op)(lhs::CCAffExpr, rhs::Variable) = ($op)(rhs,lhs)
     end
 end
 
@@ -17,6 +17,7 @@ end
 (*)(lhs::AffExpr, rhs::IndepNormal) = CCAffExpr([rhs],[lhs],AffExpr())
 
 # AffExpr--CCAffExpr
+(+)(lhs::JuMP.GenericAffExpr, rhs::JuMP.GenericAffExpr) = (+)(promote(lhs,rhs)...)
 Base.promote_rule(::Type{AffExpr},::Type{CCAffExpr}) = CCAffExpr
 Base.convert(::Type{CCAffExpr},a::AffExpr) = CCAffExpr(IndepNormal[],AffExpr[],a)
 

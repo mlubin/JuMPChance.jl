@@ -9,6 +9,7 @@ function solvecc(m::Model;method=:Refomulate,debug::Bool = true)
         # check that we have pure chance constraints
         @assert all([isa(x,Real) for x in ccdata.RVmeans])
         @assert all([isa(x,Real) for x in ccdata.RVvars])
+        #display(ccdata.chanceconstr)
 
         for cc::ChanceConstr in ccdata.chanceconstr
             ccexpr = cc.ccexpr
@@ -40,16 +41,20 @@ function solvecc(m::Model;method=:Refomulate,debug::Bool = true)
         # set up slack variables and linear constraints
         nconstr = length(ccdata.chanceconstr)
         @defVar(m, slackvar[1:nconstr] >= 0)
+        varterm = Dict()
         for i in 1:nconstr
             cc = ccdata.chanceconstr[i]
             ccexpr = cc.ccexpr
             nterms = length(ccexpr.vars)
             nu = quantile(Normal(0,1),1-cc.with_probability)
             if cc.sense == :(>=)
-                @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} + nu*slackvar[i] + ccexpr.constant <= 0)
+                @addConstraint(m, sum{getMean(ccexpr.vars[k])*ccexpr.coeffs[k], k=1:nterms} + nu*slackvar[i] + ccexpr.constant <= 0)
             else
-                @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} - nu*slackvar[i] + ccexpr.constant >= 0)
+                @addConstraint(m, sum{getMean(ccexpr.vars[k])*ccexpr.coeffs[k], k=1:nterms} - nu*slackvar[i] + ccexpr.constant >= 0)
             end
+            # auxiliary variables
+            @defVar(m, varterm[i][1:nterms])
+            @addConstraint(m, defvar[k=1:nterms], varterm[i][k] == getStdev(ccexpr.vars[k])*ccexpr.coeffs[k])
         end
 
         # TODO: special handling for quadratic objectives
@@ -78,6 +83,7 @@ function solvecc(m::Model;method=:Refomulate,debug::Bool = true)
                     var += getVar(ccexpr.vars[k])*exprval^2
                 end
                 mean += getValue(ccexpr.constant)
+                var += 1e-13 # avoid numerical issues with var == 0.0
                 if cc.sense == :(<=)
                     satisfied_prob = cdf(Normal(mean,sqrt(var)),0.0)
                 else
@@ -92,10 +98,10 @@ function solvecc(m::Model;method=:Refomulate,debug::Bool = true)
                     violation = var - getValue(slackvar[i])^2
                     debug && println("VIOL $violation")
                     @assert violation > -1e-13
-                    if violation > 1e-6
+                    if satisfied_prob >= cc.with_probability + 0.001 || violation > 1e-6
                         nviol += 1
                         # add a linearization
-                        @addConstraint(m, sum{ getVar(ccexpr.vars[k])*getValue(ccexpr.coeffs[k])*ccexpr.coeffs[k], k in 1:nterms} <= sqrt(var)*slackvar[i])
+                        @addConstraint(m, sum{ getValue(varterm[i][k])*varterm[i][k], k in 1:nterms} <= sqrt(var)*slackvar[i])
                     end
                 end
             end
