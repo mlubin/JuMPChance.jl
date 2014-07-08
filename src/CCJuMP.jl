@@ -94,18 +94,26 @@ type ChanceConstr
     ccexpr::CCAffExpr
     sense::Symbol # :(<=) or :(>=), right-hand side assumed to be zero
     with_probability::Float64 # with this probability *or less*
+    uncertainty_budget_mean::Int # for now, with Bertsimas-Sim uncertainty
+    uncertainty_budget_variance::Int # for now, with Bertsimas-Sim uncertainty
 end
 
-function addConstraint(m::Model, constr::ChanceConstr; with_probability::Float64=NaN)
+ChanceConstr(ccexpr::CCAffExpr,sense::Symbol) = ChanceConstr(ccexpr, sense, NaN, 0, 0)
+
+function addConstraint(m::Model, constr::ChanceConstr; with_probability::Float64=NaN, uncertainty_budget_mean::Int=0, uncertainty_budget_variance::Int=0)
     if !(0 < with_probability < 1)
         error("Must specify with_probability between 0 and 1")
     end
     constr.with_probability = with_probability
+    constr.uncertainty_budget_mean = uncertainty_budget_mean
+    constr.uncertainty_budget_variance = uncertainty_budget_variance
     
     ccdata = getCCData(m)
     push!(ccdata.chanceconstr, constr)
 
 end
+
+
 
 function conToStr(c::ChanceConstr)
     s = "$(affToStr(c.ccexpr)) $(c.sense) 0"
