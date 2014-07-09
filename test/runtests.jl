@@ -68,6 +68,32 @@ let
     @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
 end
 
+# quadratic objective
+let
+    m = CCModel()
+    @defIndepNormal(m, x, mean=0,var=1)
+
+    @defVar(m, z >= -100)
+    @setObjective(m, Min, z+2z^2)
+
+    addConstraint(m, z*x <= -1, with_probability=0.05)
+    status = solvecc(m, method=:Cuts, debug=true)
+    @test status == :Optimal
+    @test_approx_eq_eps getValue(z) -1/4 1e-4
+end
+let
+    m = CCModel()
+    @defIndepNormal(m, x, mean=(-1,1),var=1)
+
+    @defVar(m, z >= -100)
+    @setObjective(m, Min, z+2z^2)
+
+    addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
+    status = solvecc(m, method=:Cuts, debug=true)
+    @test status == :Optimal
+    @test_approx_eq_eps getValue(z) -1/4 1e-4
+end
+
 # uncertainty budget for mean
 let
     m = CCModel()

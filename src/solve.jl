@@ -1,6 +1,6 @@
 using Distributions # this takes a while to load
 
-function solvecc(m::Model;method=:Refomulate,debug::Bool = true)
+function solvecc(m::Model;method=:Refomulate,debug::Bool = false)
     @assert method == :Reformulate || method == :Cuts
 
     ccdata = getCCData(m)
@@ -71,7 +71,27 @@ function solvecc_cuts(m::Model; debug=true)
         @addConstraint(m, defvar[k=1:nterms], varterm[i][k] == getStdev(ccexpr.vars[k])*ccexpr.coeffs[k])
     end
 
-    # TODO: special handling for quadratic objectives
+    # By default, linearize quadratic objectives
+    # Currently only diagonal terms supported
+    # TODO: make this an option
+    qterms = length(m.obj.qvars1)
+    quadobj::QuadExpr = m.obj
+    if qterms != 0
+        # we have quadratic terms
+        # assume no duplicates for now
+        for i in 1:qterms
+            if quadobj.qvars1[i].col != quadobj.qvars2[i].col
+                error("Only diagonal quadratic objective terms currently supported")
+            end
+        end
+        if m.objSense != :Min
+            error("Only minimization is currently supported (this is easy to fix)")
+        end
+        # qlinterm[i] >= qcoeffs[i]*qvars1[i]^2
+        @defVar(m, qlinterm[1:qterms] >= 0)
+        # it would help to add some initial linearizations
+        @setObjective(m, m.objSense, quadobj.aff + sum{qlinterm[i], i=1:qterms})
+    end
     
     debug && println("Solving deterministic model")
 
@@ -79,7 +99,7 @@ function solvecc_cuts(m::Model; debug=true)
 
     @assert status == :Optimal
 
-    const MAXITER = 40 # make a parameter
+    const MAXITER = 60 # make a parameter
     niter = 0
     while niter < MAXITER
 
@@ -104,27 +124,36 @@ function solvecc_cuts(m::Model; debug=true)
                 satisfied_prob = 1-cdf(Normal(mean,sqrt(var)),0.0)
             end
             debug && println("$satisfied_prob $mean $var")
-            if satisfied_prob <= cc.with_probability
+            if satisfied_prob <= cc.with_probability + 0.001 # feasibility tolerance
                 # constraint is okay!
                 continue
             else
                 # check violation of quadratic constraint
                 violation = var - getValue(slackvar[i])^2
                 debug && println("VIOL $violation")
-                @assert violation > -1e-13
-                if satisfied_prob >= cc.with_probability + 0.001 || violation > 1e-6
-                    nviol += 1
-                    # add a linearization
-                    @addConstraint(m, sum{ getValue(varterm[i][k])*varterm[i][k], k in 1:nterms} <= sqrt(var)*slackvar[i])
-                end
+                nviol += 1
+                # add a linearization
+                @addConstraint(m, sum{ getValue(varterm[i][k])*varterm[i][k], k in 1:nterms} <= sqrt(var)*slackvar[i])
             end
         end
 
-        if nviol == 0
-            debug && println("Done after $niter iterations")
+        # check violated objective linearizations
+        nviol_obj = 0
+        for i in 1:qterms
+            qval = quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])^2
+            if getValue(qlinterm[i]) <= qval - 1e-6 # optimality tolerance
+                # add another linearization
+                nviol_obj += 1
+                @addConstraint(m, qlinterm[i] >= -qval + 2*quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])*quadobj.qvars1[i])
+            end
+        end
+
+
+        if nviol == 0 && nviol_obj == 0
+            println("Done after $niter iterations")
             return :Optimal
         else
-            debug && println("Iteration $niter: $nviol violations")
+            println("Iteration $niter: $nviol constraint violations, $nviol_obj objective linearization violations")
         end
         status = solve(m)
         @assert status == :Optimal
@@ -141,22 +170,30 @@ function solverobustcc_cuts(m::Model; debug=true)
 
     ccdata = getCCData(m)
 
-    # set up slack variables
     nconstr = length(ccdata.chanceconstr)
-    #@defVar(m, slackvar[1:nconstr] >= 0)
-    #=
-    varterm = Dict()
-    for i in 1:nconstr
-        cc = ccdata.chanceconstr[i]
-        ccexpr = cc.ccexpr
-        nterms = length(ccexpr.vars)
-        nu = quantile(Normal(0,1),1-cc.with_probability)
-        if cc.sense == :(>=)
-            @addConstraint(m, sum{getMean(ccexpr.vars[k])*ccexpr.coeffs[k], k=1:nterms} + nu*slackvar[i] + ccexpr.constant <= 0)
-        else
-            @addConstraint(m, sum{getMean(ccexpr.vars[k])*ccexpr.coeffs[k], k=1:nterms} - nu*slackvar[i] + ccexpr.constant >= 0)
+
+    # By default, linearize quadratic objectives
+    # Currently only diagonal terms supported
+    # TODO: make this an option, also deduplicate code with solvecc_cuts
+    qterms = length(m.obj.qvars1)
+    quadobj::QuadExpr = m.obj
+    if qterms != 0
+        # we have quadratic terms
+        # assume no duplicates for now
+        for i in 1:qterms
+            if quadobj.qvars1[i].col != quadobj.qvars2[i].col
+                error("Only diagonal quadratic objective terms currently supported")
+            end
         end
-    end=#
+        if m.objSense != :Min
+            error("Only minimization is currently supported (this is easy to fix)")
+        end
+        # qlinterm[i] >= qcoeffs[i]*qvars1[i]^2
+        @defVar(m, qlinterm[1:qterms] >= 0)
+        # it would help to add some initial linearizations
+        @setObjective(m, m.objSense, quadobj.aff + sum{qlinterm[i], i=1:qterms})
+    end
+
 
     # prepare uncertainty set data
     # nominal value is taken to be the center of the given interval
@@ -281,11 +318,22 @@ function solverobustcc_cuts(m::Model; debug=true)
             end
         end
 
-        if nviol == 0
-            debug && println("Done after $niter iterations")
+        # check violated objective linearizations
+        nviol_obj = 0
+        for i in 1:qterms
+            qval = quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])^2
+            if getValue(qlinterm[i]) <= qval - 1e-6 # optimality tolerance
+                # add another linearization
+                nviol_obj += 1
+                @addConstraint(m, qlinterm[i] >= -qval + 2*quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])*quadobj.qvars1[i])
+            end
+        end
+
+        if nviol == 0 && nviol_obj == 0
+            println("Done after $niter iterations")
             return :Optimal
         else
-            debug && println("Iteration $niter: $nviol violations")
+            println("Iteration $niter: $nviol constraint violations, $nviol_obj objective linearization violations")
         end
         status = solve(m)
         @assert status == :Optimal
