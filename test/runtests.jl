@@ -6,7 +6,6 @@ using Distributions
 let
     m = CCModel()
     @defIndepNormal(m, x, mean=1, var=1)
-    #x = IndepNormal(m, 1.0,1.0, "x")
     @test affToStr(1+x) == "(1)*x + 1"
 
     @defVar(m, v)
@@ -81,4 +80,48 @@ let
     status = solvecc(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/(1+quantile(Normal(0,1),0.95)) 1e-6
+end
+
+# uncertain variance, but no budget
+let
+    m = CCModel()
+    @defIndepNormal(m, x, mean=(-1,1),var=(0.95,1.05))
+
+    @defVar(m, z >= -100)
+    @setObjective(m, Min, z)
+
+    addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=0)
+    status = solvecc(m, method=:Cuts)
+    @test status == :Optimal
+    @test_approx_eq_eps getValue(z) -1/(1+quantile(Normal(0,1),0.95)) 1e-6
+end
+
+# uncertain variance, with budget
+let
+    m = CCModel()
+    @defIndepNormal(m, x, mean=(-1,1),var=(0.95,1.05))
+
+    @defVar(m, z >= -100)
+    @setObjective(m, Min, z)
+
+    addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
+    status = solvecc(m, method=:Cuts)
+    @test status == :Optimal
+    @test_approx_eq_eps getValue(z) -1/(1+sqrt(1.05)*quantile(Normal(0,1),0.95)) 1e-6
+end
+
+# more than one R.V.
+let
+    m = CCModel()
+    @defIndepNormal(m, x, mean=(-1,1),var=(0.95,1.05))
+    @defIndepNormal(m, y, mean=(-0.01,0.01),var=0.01)
+
+    @defVar(m, z >= -100)
+    @setObjective(m, Min, z)
+
+    addConstraint(m, z*x + y <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
+    status = solvecc(m, method=:Cuts)
+    @test status == :Optimal
+    # In mathematica: Minimize[{z, z - \[Nu]*Sqrt[1.05*z^2 + 0.01] >= -1}, z]
+    @test_approx_eq_eps getValue(z) -0.36431227017642165 1e-5
 end

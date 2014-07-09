@@ -43,7 +43,6 @@ macro defIndepNormal(m, x, mean, var)
         deleteat!(varstr.args,length(varstr.args))
         push!(varstr.args,"]")
         code = :( $(refcall) = IndepNormal($m, $mean, $var, $varstr) )
-        #code = :( $(refcall) = IndepNormal($m, $mean, $var, "foo" ))
         for (idxvar, idxset) in zip(reverse(idxvars),reverse(idxsets))
             code = quote
                 for $idxvar in $idxset

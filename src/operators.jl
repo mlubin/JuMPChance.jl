@@ -17,7 +17,6 @@ end
 (*)(lhs::AffExpr, rhs::IndepNormal) = CCAffExpr([rhs],[lhs],AffExpr())
 
 # AffExpr--CCAffExpr
-(+)(lhs::JuMP.GenericAffExpr, rhs::JuMP.GenericAffExpr) = (+)(promote(lhs,rhs)...)
 Base.promote_rule(::Type{AffExpr},::Type{CCAffExpr}) = CCAffExpr
 Base.convert(::Type{CCAffExpr},a::AffExpr) = CCAffExpr(IndepNormal[],AffExpr[],a)
 
