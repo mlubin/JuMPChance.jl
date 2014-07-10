@@ -77,4 +77,78 @@ and
 
     P\left(\sum_{i=1}^k \left(c_i^Tx +d_i\right)z_i \leq b\right) \leq \epsilon
 
-where :math:`x` are the decision variables, :math:`c_i` are coefficient vectors, :math:`d_i` and :math:`b` are scalars, :math:`z_i` are independent jointly normal random variables with provided means and variances, and :math:`\epsilon \in (0,1)`.
+where :math:`x` are the decision variables, :math:`c_i` are coefficient vectors, :math:`d_i` and :math:`b` are scalars, :math:`z_i` are independent jointly normal random variables with provided means and variances for :math:`i=1,\ldots,k`, and :math:`\epsilon \in (0,1)`.
+
+Chance constraints of the above form are added by using the ``addConstraint`` function. For example::
+
+    @defIndepNormal(m, x, mean=0,var=1)
+    @defVar(m, z)
+
+    addConstraint(m, z*x <= -1, with_probability=0.05)
+
+Adds the constraint :math:`P(z*x \leq -1) < 0.05`. Note that the ``with_probability`` argument specifies the *maximum* probability :math:`\epsilon` with which the constraint may be satisfied, and so should be a small number.
+
+
+Distributionally Robust Chance Constraints
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+One may also specify normally distributed random variables whose parameters
+(mean and variance) are uncertain, that is, known to fall within a certain interval.
+These random variables with uncertain distribution are declared as follows::
+
+    @defIndepNormal(m, x, mean=(-1,1), var=(20,30))
+
+Any combination of the mean, variance, or both may be uncertain.
+When these variables appear in constraints, the constraint is
+interpreted to be robust, and implies that the the chance constraint
+must hold for *all possible* distributions, where the set of possible
+distributions will be defined more precisely below. Mathematically,
+this is
+
+.. math::
+
+    P\left(\sum_{i=1}^k \left(c_i^Tx +d_i\right)z_i \leq b\right) \leq \epsilon, \forall \text{ distributions of } z_1,\ldots,z_n
+
+Using the above notation, let the uncertainty interval on the mean of :math:`z_i` be :math:`[\hat\mu_i - \alpha_i,\hat\mu_i + \alpha_i]` and on the variance :math:`[\hat\sigma_i^2 - \beta_i, \hat\sigma_i^2 + \beta_i]` where :math:`\alpha_i \geq 0` and :math:`\beta_i \geq 0`.
+
+Currently CCJuMP supports only the following uncertainty sets on the means and variances:
+
+.. math::
+    M = \left\{ (\mu_1,\ldots,\mu_k) : \exists (s_1,\ldots,s_k) \text{ such that }\mu_i = \hat\mu_i + s_i, |s_i| \leq \alpha_i, \sum_{i=1}^k \frac{|s_i|}{\alpha_i} \leq \Gamma_\mu \right\}
+
+    V = \left\{ (v_1,\ldots,v_k) : \exists (s_1,\ldots,s_k) \text{ such that }v_i = \hat\sigma_i + s_i, |s_i| \leq \beta_i, \sum_{i=1}^k \frac{|s_i|}{\beta_i} \leq \Gamma_\sigma \right\}
+
+where :math:`\Gamma_\mu` and :math:`\Gamma_\sigma` and given (integer) constants, known as the uncertainty budgets. The interpretation of these sets is that at most :math:`\Gamma` out of :math:`k` uncertain parameters are allows to vary from their nominal values :math:`\hat\mu_i` and :math:`\hat\sigma_i^2`. This is the uncertainty set proposed by Bertsimas and Sim (2004). Note that the means and variances are allowed to vary independently.
+
+The uncertainty budgets :math:`\Gamma_\mu` and :math:`\Gamma_\sigma` are specified as parameters to ``addConstraint`` as follows::
+
+    addConstraint(m, z*x <= -1, with_probability=0.05, 
+        uncertainty_budget_mean=1, uncertainty_budget_variance=1)
+
+Solving the model
+^^^^^^^^^^^^^^^^^
+
+After the model `m` has been created and all constraints added, calling::
+
+    solvecc(m,method=:Cuts)
+
+or::
+
+    solvecc(m,method=:Reformulate)
+
+will tell CCJuMP to solve the model. The available solution methods are described
+in the following section.
+
+The ``solvecc`` function also returns a solution status. This should be checked
+to confirm that the model was successfully solved to optimality, for example::
+
+    status = solvecc(m)
+    if status == :Optimal
+        println("Solved to optimality")
+    else
+        println("Not optimal, termination status $status")
+    end
+
+Optimal values of the decision variables are available by using
+``getValue``, as with JuMP.
+
