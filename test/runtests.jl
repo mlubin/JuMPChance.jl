@@ -1,5 +1,6 @@
 using CCJuMP, JuMP
 using Base.Test
+using Distributions
 
 
 let

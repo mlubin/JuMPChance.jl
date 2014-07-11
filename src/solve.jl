@@ -1,10 +1,11 @@
 using Distributions # this takes a while to load
 
-function solvecc(m::Model;method=:Refomulate,debug::Bool = false)
+function solvecc(m::Model;method=:Refomulate,probability_tolerance=0.001,debug::Bool = false)
     @assert method == :Reformulate || method == :Cuts
 
     ccdata = getCCData(m)
     no_uncertains = all([isa(x,Real) for x in ccdata.RVmeans]) && all([isa(x,Real) for x in ccdata.RVvars])
+    probability_tolerance > 0 || error("Invalid probability tolerance $probability_tolerance")
 
     if method == :Reformulate
         # check that we have pure chance constraints
@@ -36,9 +37,9 @@ function solvecc(m::Model;method=:Refomulate,debug::Bool = false)
     else
         # check that we have pure chance constraints
         if no_uncertains
-            solvecc_cuts(m, debug=debug)
+            solvecc_cuts(m, probability_tolerance=probability_tolerance, debug=debug)
         else
-            solverobustcc_cuts(m, debug=debug)
+            solverobustcc_cuts(m,probability_tolerance=probability_tolerance, debug=debug)
         end
     end
 
@@ -47,7 +48,7 @@ function solvecc(m::Model;method=:Refomulate,debug::Bool = false)
 end
 
 
-function solvecc_cuts(m::Model; debug=true)
+function solvecc_cuts(m::Model; probability_tolerance::Float64=NaN, debug=true)
 
 
     ccdata = getCCData(m)
@@ -124,7 +125,7 @@ function solvecc_cuts(m::Model; debug=true)
                 satisfied_prob = 1-cdf(Normal(mean,sqrt(var)),0.0)
             end
             debug && println("$satisfied_prob $mean $var")
-            if satisfied_prob <= cc.with_probability + 0.001 # feasibility tolerance
+            if satisfied_prob <= cc.with_probability + probability_tolerance # feasibility tolerance
                 # constraint is okay!
                 continue
             else
@@ -165,7 +166,7 @@ function solvecc_cuts(m::Model; debug=true)
 
 end
 
-function solverobustcc_cuts(m::Model; debug=true)
+function solverobustcc_cuts(m::Model; probability_tolerance::Float64=NaN, debug=true)
 
 
     ccdata = getCCData(m)
@@ -290,7 +291,7 @@ function solverobustcc_cuts(m::Model; debug=true)
                 continue
             else
                 debug && println("VIOL ", 100*(satisfied_prob - cc.with_probability), "%")
-                if satisfied_prob >= cc.with_probability + 0.001
+                if satisfied_prob >= cc.with_probability + probability_tolerance
                     nviol += 1
                     var_coeffs = [vars_nominal[ccexpr.vars[k].idx] for k in 1:nterms]
                     for k in 1:cc.uncertainty_budget_variance
