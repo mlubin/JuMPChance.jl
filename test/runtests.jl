@@ -1,6 +1,5 @@
 using CCJuMP, JuMP
 using Base.Test
-using Distributions
 
 
 let
@@ -20,8 +19,13 @@ let
 
     c = (3v+1)*x + 10 <= 20
     @test conToStr(c) == "(3 v + 1)*x + -10 <= 0"
-    addConstraint(m, c, with_probability=0.95)
-    @test conToStr(CCJuMP.getCCData(m).chanceconstr[1]) == "(3 v + 1)*x + -10 <= 0, with probability 0.95"
+    addConstraint(m, c, with_probability=0.05)
+    @test conToStr(CCJuMP.getCCData(m).chanceconstr[1]) == "(3 v + 1)*x + -10 <= 0, with probability 0.05"
+
+    @test_throws @defIndepNormal(m, q, mean=1, var=-1)
+    @test_throws @defIndepNormal(m, q, mean=1, var=(-1,1))
+
+
 end
 
 let

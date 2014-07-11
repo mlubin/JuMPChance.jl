@@ -52,6 +52,11 @@ function IndepNormal(m::Model, mean, var, name::String)
     ccdata = getCCData(m)
     ccdata.numRVs += 1
     push!(ccdata.RVmeans, mean)
+    for v in var
+        if v < 0
+            error("Invalid value $v for variance of $name")
+        end
+    end
     push!(ccdata.RVvars, var)
     push!(ccdata.RVnames, name)
     return IndepNormal(m, ccdata.numRVs)
