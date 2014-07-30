@@ -50,8 +50,9 @@ end
 
 function solvecc_cuts(m::Model; probability_tolerance::Float64=NaN, debug=true)
 
-
     ccdata = getCCData(m)
+
+    has_integers = any(m.colCat .== JuMP.INTEGER)
 
     # set up slack variables and linear constraints
     nconstr = length(ccdata.chanceconstr)
@@ -93,18 +94,13 @@ function solvecc_cuts(m::Model; probability_tolerance::Float64=NaN, debug=true)
         # it would help to add some initial linearizations
         @setObjective(m, m.objSense, quadobj.aff + sum{qlinterm[i], i=1:qterms})
     end
-    
-    debug && println("Solving deterministic model")
 
-    status = solve(m)
-
-    @assert status == :Optimal
-
-    const MAXITER = 60 # make a parameter
-    niter = 0
-    while niter < MAXITER
+    function addcuts(cb)
+        in_callback = isa(cb, JuMP.MathProgBase.MathProgCallbackData)
 
         nviol = 0
+        nviol_obj = 0
+        
         # check violated chance constraints
         for i in 1:nconstr
             cc::ChanceConstr = ccdata.chanceconstr[i]
@@ -134,24 +130,59 @@ function solvecc_cuts(m::Model; probability_tolerance::Float64=NaN, debug=true)
                 debug && println("VIOL $violation")
                 nviol += 1
                 # add a linearization
-                @addConstraint(m, sum{ getValue(varterm[i][k])*varterm[i][k], k in 1:nterms} <= sqrt(var)*slackvar[i])
+                if in_callback
+                    @addLazyConstraint(cb, sum{ getValue(varterm[i][k])*varterm[i][k], k in 1:nterms} <= sqrt(var)*slackvar[i])
+                else
+                    @addConstraint(m, sum{ getValue(varterm[i][k])*varterm[i][k], k in 1:nterms} <= sqrt(var)*slackvar[i])
+                end
             end
         end
 
         # check violated objective linearizations
-        nviol_obj = 0
         for i in 1:qterms
             qval = quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])^2
             if getValue(qlinterm[i]) <= qval - 1e-6 # optimality tolerance
                 # add another linearization
                 nviol_obj += 1
-                @addConstraint(m, qlinterm[i] >= -qval + 2*quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])*quadobj.qvars1[i])
+                if in_callback
+                    @addLazyConstraint(cb, qlinterm[i] >= -qval + 2*quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])*quadobj.qvars1[i])
+                else
+                    @addConstraint(m, qlinterm[i] >= -qval + 2*quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])*quadobj.qvars1[i])
+                end
             end
         end
+        return nviol, nviol_obj
+    end
+    
+    if debug && !has_integers
+        println("Solving deterministic model")
+    end
+
+    do_lazy = has_integers
+    #do_lazy = false
+    if do_lazy
+        setLazyCallback(m, addcuts)
+    end
+    tic()
+    status = solve(m)
+
+    if do_lazy
+        toc()
+        return status
+    end
+    
+    @assert status == :Optimal
 
 
+    const MAXITER = 60 # make a parameter
+    niter = 0
+    while niter < MAXITER
+
+        nviol, nviol_obj = addcuts(nothing)
+ 
         if nviol == 0 && nviol_obj == 0
             println("Done after $niter iterations")
+            toc()
             return :Optimal
         else
             println("Iteration $niter: $nviol constraint violations, $nviol_obj objective linearization violations")
