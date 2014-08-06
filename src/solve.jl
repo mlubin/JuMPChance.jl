@@ -1,4 +1,5 @@
 using Distributions # this takes a while to load
+import MathProgBase
 
 function solvecc(m::Model;method=:Refomulate,probability_tolerance=0.001,debug::Bool = false)
     @assert method == :Reformulate || method == :Cuts
@@ -96,7 +97,7 @@ function solvecc_cuts(m::Model; probability_tolerance::Float64=NaN, debug=true)
     end
 
     function addcuts(cb)
-        in_callback = isa(cb, JuMP.MathProgBase.MathProgCallbackData)
+        in_callback = isa(cb, MathProgBase.MathProgCallbackData)
 
         nviol = 0
         nviol_obj = 0
@@ -161,7 +162,7 @@ function solvecc_cuts(m::Model; probability_tolerance::Float64=NaN, debug=true)
     do_lazy = has_integers
     #do_lazy = false
     if do_lazy
-        setLazyCallback(m, addcuts)
+        setLazyCallback(m, addcuts, fractional=true)
     end
     tic()
     status = solve(m)
