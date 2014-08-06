@@ -1,4 +1,4 @@
-using Distributions # this takes a while to load
+include("distributions.jl")
 import MathProgBase
 
 function solvecc(m::Model;method=:Refomulate,probability_tolerance=0.001,debug::Bool = false)
