@@ -6,7 +6,7 @@ using Distributions
 let
     m = CCModel()
     @defIndepNormal(m, x, mean=1, var=1)
-    @test affToStr(1+x) == "(1)*x + 1"
+    @test affToStr(1+x) == "(1.0)*x + 1.0"
 
     @defVar(m, v)
 
@@ -14,6 +14,8 @@ let
 
     @defIndepNormal(m,z[i=1:10],mean=i,var=1)
     @test affToStr(v*z[1]+3.5) == "(v)*z[1] + 3.5"
+    
+    @test affToStr(v*z[1]+2z[2]+3.5) == "(v)*z[1] + (2)*z[2] + 3.5"
 
     @test getMean(z[5]) == 5
     @test getVar(z[5]) == 1
@@ -25,6 +27,8 @@ let
 
     @test_throws @defIndepNormal(m, q, mean=1, var=-1)
     @test_throws @defIndepNormal(m, q, mean=1, var=(-1,1))
+
+    @test affToStr(z[1]+z[2]-2z[3]+10) == "(1.0)*z[1] + (1.0)*z[2] + (-2.0)*z[3] + 10.0"
 
 
 end

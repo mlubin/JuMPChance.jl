@@ -81,6 +81,21 @@ CCAffExpr() = CCAffExpr(IndepNormal[],AffExpr[],AffExpr())
 Base.print(io::IO, a::CCAffExpr) = print(io, affToStr(a))
 Base.show( io::IO, a::CCAffExpr) = print(io, affToStr(a))
 
+# affine expression only involving r.v.'s
+typealias RandomAffExpr JuMP.GenericAffExpr{Float64,IndepNormal}
+
+RandomAffExpr() = RandomAffExpr(IndepNormal[],Float64[],0.0)
+
+Base.print(io::IO, a::RandomAffExpr) = print(io, affToStr(a))
+Base.show( io::IO, a::RandomAffExpr) = print(io, affToStr(a))
+
+Base.promote_rule(::Type{CCAffExpr},::Type{RandomAffExpr}) = CCAffExpr
+Base.promote_rule(::Type{RandomAffExpr},::Type{CCAffExpr}) = CCAffExpr
+
+Base.convert(::Type{CCAffExpr},a::RandomAffExpr) = CCAffExpr(a.vars,[convert(AffExpr,c) for c in a.coeffs],convert(AffExpr,a.constant))
+
+
+
 function affToStr(a::CCAffExpr)
 
     if length(a.vars) == 0
@@ -92,7 +107,22 @@ function affToStr(a::CCAffExpr)
 
     # don't merge duplicates (yet)
     strs = ["($(affToStr(a.coeffs[i],true)))*$(ccdata.RVnames[a.vars[i].idx])" for i in 1:length(a.vars)]
-    return string(join(strs," "), " + ", affToStr(a.constant,true))
+    return string(join(strs," + "), " + ", affToStr(a.constant,true))
+end
+
+
+function affToStr(a::RandomAffExpr)
+
+    if length(a.vars) == 0
+        return string(a.constant)
+    end
+    
+    m = a.vars[1].m
+    ccdata = getCCData(m)
+
+    # don't merge duplicates (yet)
+    strs = ["($(a.coeffs[i]))*$(ccdata.RVnames[a.vars[i].idx])" for i in 1:length(a.vars)]
+    return string(join(strs," + "), " + ", string(a.constant))
 end
 
 type ChanceConstr

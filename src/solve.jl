@@ -116,11 +116,18 @@ function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tol
                 var += getVar(ccexpr.vars[k])*exprval^2
             end
             mean += getValue(ccexpr.constant)
-            var += 1e-13 # avoid numerical issues with var == 0.0
-            if cc.sense == :(<=)
-                satisfied_prob = cdf(Normal(mean,sqrt(var)),0.0)
+            if var == 0.0 # corner case, need to handle carefully
+                if cc.sense == :(<=) # actually this means strict inequality
+                    satisfied_prob = (mean >= 0.0) ? 0.0 : 1.0
+                else
+                    satisfied_prob = (mean <= 0.0) ? 0.0 : 1.0
+                end
             else
-                satisfied_prob = 1-cdf(Normal(mean,sqrt(var)),0.0)
+                if cc.sense == :(<=)
+                    satisfied_prob = cdf(Normal(mean,sqrt(var)),0.0)
+                else
+                    satisfied_prob = 1-cdf(Normal(mean,sqrt(var)),0.0)
+                end
             end
             debug && println("$satisfied_prob $mean $var")
             if satisfied_prob <= cc.with_probability + probability_tolerance # feasibility tolerance
@@ -129,6 +136,7 @@ function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tol
             else
                 # check violation of quadratic constraint
                 violation = var - getValue(slackvar[i])^2
+                debug && println("Violated: $cc")
                 debug && println("VIOL $violation")
                 nviol += 1
                 # add a linearization
@@ -201,7 +209,7 @@ function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tol
 
 end
 
-function solverobustcc_cuts(m::Model; probability_tolerance::Float64=NaN, debug=true)
+function solverobustcc_cuts(m::Model; linearize_objective::Bool=false,  probability_tolerance::Float64=NaN, debug=true)
 
 
     ccdata = getCCData(m)
@@ -213,7 +221,7 @@ function solverobustcc_cuts(m::Model; probability_tolerance::Float64=NaN, debug=
     # TODO: make this an option, also deduplicate code with solvecc_cuts
     qterms = length(m.obj.qvars1)
     quadobj::QuadExpr = m.obj
-    if qterms != 0
+    if qterms != 0 && linearize_objective
         # we have quadratic terms
         # assume no duplicates for now
         for i in 1:qterms
@@ -356,12 +364,14 @@ function solverobustcc_cuts(m::Model; probability_tolerance::Float64=NaN, debug=
 
         # check violated objective linearizations
         nviol_obj = 0
-        for i in 1:qterms
-            qval = quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])^2
-            if getValue(qlinterm[i]) <= qval - 1e-6 # optimality tolerance
-                # add another linearization
-                nviol_obj += 1
-                @addConstraint(m, qlinterm[i] >= -qval + 2*quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])*quadobj.qvars1[i])
+        if linearize_objective
+            for i in 1:qterms
+                qval = quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])^2
+                if getValue(qlinterm[i]) <= qval - 1e-6 # optimality tolerance
+                    # add another linearization
+                    nviol_obj += 1
+                    @addConstraint(m, qlinterm[i] >= -qval + 2*quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])*quadobj.qvars1[i])
+                end
             end
         end
 
