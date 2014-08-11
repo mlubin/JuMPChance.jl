@@ -75,9 +75,8 @@ function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tol
         @addConstraint(m, defvar[k=1:nterms], varterm[i][k] == getStdev(ccexpr.vars[k])*ccexpr.coeffs[k])
     end
 
-    # By default, linearize quadratic objectives
+    # Optionally linearize quadratic objectives
     # Currently only diagonal terms supported
-    # TODO: make this an option
     qterms = length(m.obj.qvars1)
     quadobj::QuadExpr = m.obj
     if qterms != 0 && linearize_objective
@@ -216,9 +215,9 @@ function solverobustcc_cuts(m::Model; linearize_objective::Bool=false,  probabil
 
     nconstr = length(ccdata.chanceconstr)
 
-    # By default, linearize quadratic objectives
+    # Optionally linearize quadratic objectives
     # Currently only diagonal terms supported
-    # TODO: make this an option, also deduplicate code with solvecc_cuts
+    # TODO: deduplicate code with solvecc_cuts
     qterms = length(m.obj.qvars1)
     quadobj::QuadExpr = m.obj
     if qterms != 0 && linearize_objective
