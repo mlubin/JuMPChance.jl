@@ -319,13 +319,20 @@ function solverobustcc_cuts(m::Model; linearize_objective::Bool=false,  probabil
                 worst_mean = nominal_mean + sum(meanvals[sorted_mean_idx[1:cc.uncertainty_budget_mean]])
             end
             worst_var = nominal_var + sum(varvals[sorted_var_idx[1:cc.uncertainty_budget_variance]])
-            worst_var += 1e-13 # avoid numerical issues with var == 0.0
             debug && println("worst_mean = $worst_mean")
             debug && println("worst_var = $worst_var")
-            if cc.sense == :(<=)
-                satisfied_prob = cdf(Normal(worst_mean,sqrt(worst_var)),0.0)
+            if worst_var == 0.0 # corner case, need to handle carefully
+                if cc.sense == :(<=) # actually this means strict inequality
+                    satisfied_prob = (worst_mean >= 0.0) ? 0.0 : 1.0
+                else
+                    satisfied_prob = (worst_mean <= 0.0) ? 0.0 : 1.0
+                end
             else
-                satisfied_prob = 1-cdf(Normal(worst_mean,sqrt(worst_var)),0.0)
+                if cc.sense == :(<=)
+                    satisfied_prob = cdf(Normal(worst_mean,sqrt(worst_var)),0.0)
+                else
+                    satisfied_prob = 1-cdf(Normal(worst_mean,sqrt(worst_var)),0.0)
+                end
             end
             debug && println("$satisfied_prob $mean $var")
             if satisfied_prob <= cc.with_probability
