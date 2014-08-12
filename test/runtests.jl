@@ -30,6 +30,8 @@ let
 
     @test affToStr(z[1]+z[2]-2z[3]+10) == "(1.0)*z[1] + (1.0)*z[2] + (-2.0)*z[3] + 10.0"
 
+    @test affToStr(v*(x-1)) == "(v)*x + -v"
+    @test affToStr(x*(v-1)) == "(v - 1)*x + 0"
 
 end
 
@@ -41,6 +43,36 @@ let
 
         @setObjective(m, Min, z)
         addConstraint(m, z*x <= -1, with_probability=0.05)
+
+        status = solvecc(m, method=method)
+        @test status == :Optimal
+        @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
+    end
+end
+
+# invariance to transformations
+let
+    for method in [:Reformulate,:Cuts]
+        m = CCModel()
+        @defIndepNormal(m, x, mean=1, var=1)
+        @defVar(m, z >= -100) # so original problem is bounded
+
+        @setObjective(m, Min, z)
+        addConstraint(m, z*(x-1) <= -1, with_probability=0.05)
+
+        status = solvecc(m, method=method)
+        @test status == :Optimal
+        @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
+    end
+end
+let
+    for method in [:Reformulate,:Cuts]
+        m = CCModel()
+        @defIndepNormal(m, x, mean=2, var=4)
+        @defVar(m, z >= -100) # so original problem is bounded
+
+        @setObjective(m, Min, z)
+        addConstraint(m, z*(x/2-1) <= -1, with_probability=0.05)
 
         status = solvecc(m, method=method)
         @test status == :Optimal
@@ -63,7 +95,6 @@ let
 end
 
 # flipped signs
-
 let
     m = CCModel()
     @defIndepNormal(m, x, mean=(-1,1),var=1)
@@ -143,6 +174,34 @@ let
     status = solvecc(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/(1+sqrt(1.05)*quantile(Normal(0,1),0.95)) 1e-6
+end
+
+# shifted
+let
+    m = CCModel()
+    @defIndepNormal(m, x, mean=(0,2),var=(0.95,1.05))
+
+    @defVar(m, z >= -100)
+    @setObjective(m, Min, z)
+
+    addConstraint(m, z*(x-1) <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
+    status = solvecc(m, method=:Cuts)
+    @test status == :Optimal
+    @test_approx_eq_eps getValue(z) -1/(1+sqrt(1.05)*quantile(Normal(0,1),0.95)) 1e-6
+end
+
+# rescaled variable
+let
+    m = CCModel()
+    @defIndepNormal(m, x, mean=(0,2),var=(0.95,1.05))
+
+    @defVar(m, z >= -100)
+    @setObjective(m, Min, z)
+
+    addConstraint(m, (z/2)*(x-1) <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
+    status = solvecc(m, method=:Cuts)
+    @test status == :Optimal
+    @test_approx_eq_eps getValue(z) -2/(1+sqrt(1.05)*quantile(Normal(0,1),0.95)) 1e-6
 end
 
 # more than one R.V.
