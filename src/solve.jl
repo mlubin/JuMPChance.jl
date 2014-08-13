@@ -337,11 +337,11 @@ function solverobustcc_cuts(m::Model; linearize_objective::Bool=false,  probabil
                 worst_mean = nominal_mean + sum(meanvals[sorted_mean_idx[1:cc.uncertainty_budget_mean]])
             end
             worst_var = nominal_var + sum(varvals[sorted_var_idx[1:cc.uncertainty_budget_variance]])
-            if worst_var == 0.0 # corner case, need to handle carefully
+            if worst_var < 1e-10 # corner case, need to handle carefully
                 if cc.sense == :(<=) # actually this means strict inequality
-                    satisfied_prob = (worst_mean >= 0.0) ? 0.0 : 1.0
+                    satisfied_prob = (worst_mean >= -1e-7) ? 0.0 : 1.0
                 else
-                    satisfied_prob = (worst_mean <= 0.0) ? 0.0 : 1.0
+                    satisfied_prob = (worst_mean <= 1e-7) ? 0.0 : 1.0
                 end
             else
                 if cc.sense == :(<=)
@@ -354,20 +354,20 @@ function solverobustcc_cuts(m::Model; linearize_objective::Bool=false,  probabil
                 # constraint is okay!
                 continue
             else
-                debug && println(cc)
-                debug && println("nominal_mean = $nominal_mean")
-                debug && println("nominal_var = $nominal_var")
-                debug && println("worst_mean = $worst_mean")
-                debug && println("meanvals = $meanvals")
-                debug && println("worst_var = $worst_var")
-                debug && println("satisfied w.p. $satisfied_prob")
-                debug && println("nu = $nu")
-                debug && println("Extreme indices (mean) ", sorted_mean_idx[1:cc.uncertainty_budget_mean])
-                debug && println("Extreme indices (var) ", sorted_var_idx[1:cc.uncertainty_budget_variance])
-                debug && println(ccexpr.constant, " ===> ", getValue(ccexpr.constant))
-                debug && println(ccexpr.coeffs[1], " ===> ", getValue(ccexpr.coeffs[1]))
-                debug && println("VIOL ", 100*(satisfied_prob - cc.with_probability), "%")
                 if satisfied_prob >= cc.with_probability + probability_tolerance
+                    debug && println(cc)
+                    debug && println("nominal_mean = $nominal_mean")
+                    debug && println("nominal_var = $nominal_var")
+                    debug && println("worst_mean = $worst_mean")
+                    debug && println("meanvals = $meanvals")
+                    debug && println("worst_var = $worst_var")
+                    debug && println("satisfied w.p. $satisfied_prob")
+                    debug && println("nu = $nu")
+                    debug && println("Extreme indices (mean) ", sorted_mean_idx[1:cc.uncertainty_budget_mean])
+                    debug && println("Extreme indices (var) ", sorted_var_idx[1:cc.uncertainty_budget_variance])
+                    debug && println(ccexpr.constant, " ===> ", getValue(ccexpr.constant))
+                    debug && println(ccexpr.coeffs[1], " ===> ", getValue(ccexpr.coeffs[1]))
+                    debug && println("VIOL ", 100*(satisfied_prob - cc.with_probability), "%")
                     nviol += 1
                     var_coeffs = [vars_nominal[ccexpr.vars[k].idx] for k in 1:nterms]
                     for k in 1:cc.uncertainty_budget_variance
