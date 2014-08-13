@@ -201,7 +201,9 @@ function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tol
             println("Iteration $niter: $nviol constraint violations, $nviol_obj objective linearization violations")
         end
         status = solve(m)
-        @assert status == :Optimal
+        if status != :Optimal
+            return status
+        end
         niter += 1
     end
 
@@ -411,7 +413,9 @@ function solverobustcc_cuts(m::Model; linearize_objective::Bool=false,  probabil
             println("Iteration $niter: $nviol constraint violations, $nviol_obj objective linearization violations")
         end
         status = solve(m)
-        @assert status == :Optimal
+        if status != :Optimal
+            return status
+        end
         niter += 1
     end
 
