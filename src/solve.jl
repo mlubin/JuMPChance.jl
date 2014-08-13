@@ -115,7 +115,7 @@ function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tol
                 var += getVar(ccexpr.vars[k])*exprval^2
             end
             mean += getValue(ccexpr.constant)
-            if var == 1e-10 # corner case, need to handle carefully
+            if var < 1e-10 # corner case, need to handle carefully
                 if cc.sense == :(<=) # actually this means strict inequality
                     satisfied_prob = (mean >= -1e-7) ? 0.0 : 1.0
                 else
