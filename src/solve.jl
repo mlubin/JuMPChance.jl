@@ -182,7 +182,9 @@ function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tol
         return status
     end
     
-    @assert status == :Optimal
+    if status != :Optimal
+        return status
+    end
 
 
     const MAXITER = 60 # make a parameter
@@ -279,8 +281,10 @@ function solverobustcc_cuts(m::Model; linearize_objective::Bool=false,  probabil
     debug && println("Solving deterministic model")
 
     status = solve(m)
-
-    @assert status == :Optimal
+    
+    if status != :Optimal
+        return status
+    end
 
     const MAXITER = 40 # make a parameter
     niter = 0
