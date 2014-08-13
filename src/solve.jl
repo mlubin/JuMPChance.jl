@@ -258,7 +258,9 @@ function solverobustcc_cuts(m::Model; linearize_objective::Bool=false,  probabil
             # deviation is zero
         else
             lb,ub = rvmean
-            @assert ub >= lb
+            if ub < lb
+                error("Variable $(ccdata.RVnames[i]) has invalid mean interval [$lb, $ub]")
+            end
             means_nominal[i] = (lb+ub)/2
             means_deviation[i] = (ub-lb)/2
         end
@@ -266,7 +268,9 @@ function solverobustcc_cuts(m::Model; linearize_objective::Bool=false,  probabil
             vars_nominal[i] = rvvar
         else
             lb,ub = rvvar
-            @assert ub >= lb
+            if ub < lb
+                error("Variable $(ccdata.RVnames[i]) has invalid variance interval [$lb, $ub]")
+            end
             vars_nominal[i] = (lb+ub)/2
             vars_deviation[i] = (ub-lb)/2
         end
