@@ -15,4 +15,6 @@ before_install:
   - sudo apt-get install libgmp-dev -y
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
 script:
-  - julia -e 'Pkg.init(); Pkg.clone(pwd()); Pkg.add("GLPKMathProgInterface"); Pkg.test("CCJuMP")'
+  - julia -e 'Pkg.init(); Pkg.clone(pwd()); Pkg.add("GLPKMathProgInterface")'
+  - julia -e 'Pkg.checkout("JuMP")' # we need JuMP master for now
+  - julia -e 'Pkg.test("CCJuMP")'
