@@ -1,7 +1,7 @@
 include("distributions.jl")
 import MathProgBase
 
-function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60)
+function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6)
     @assert method == :Reformulate || method == :Cuts
 
     ccdata = getCCData(m)
@@ -39,9 +39,9 @@ function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,pro
     else
         # check that we have pure chance constraints
         if no_uncertains
-            solvecc_cuts(m, probability_tolerance=probability_tolerance, linearize_objective=linearize_objective, debug=debug, iteration_limit=iteration_limit)
+            solvecc_cuts(m, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance)
         else
-            solverobustcc_cuts(m,probability_tolerance=probability_tolerance, linearize_objective=linearize_objective, debug=debug, iteration_limit=iteration_limit)
+            solverobustcc_cuts(m, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance)
         end
     end
 
@@ -50,7 +50,7 @@ function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,pro
 end
 
 
-function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tolerance::Float64=NaN, debug=true, iteration_limit::Int=60)
+function solvecc_cuts(m::Model, probability_tolerance::Float64, linearize_objective::Bool, debug::Bool, iteration_limit::Int, objective_linearization_tolerance::Float64)
 
     ccdata = getCCData(m)
 
@@ -151,7 +151,7 @@ function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tol
             # check violated objective linearizations
             for i in 1:qterms
                 qval = quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])^2
-                if getValue(qlinterm[i]) <= qval - 1e-6 # optimality tolerance
+                if getValue(qlinterm[i]) <= qval - objective_linearization_tolerance
                     debug && println("Linerization violation: ", qval - getValue(qlinterm[i]))
                     # add another linearization
                     nviol_obj += 1
@@ -212,8 +212,7 @@ function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tol
 
 end
 
-function solverobustcc_cuts(m::Model; linearize_objective::Bool=false,  probability_tolerance::Float64=NaN, debug=true, iteration_limit::Int=60)
-
+function solverobustcc_cuts(m::Model, probability_tolerance::Float64, linearize_objective::Bool, debug::Bool, iteration_limit::Int, objective_linearization_tolerance::Float64)
 
     ccdata = getCCData(m)
 
@@ -401,7 +400,7 @@ function solverobustcc_cuts(m::Model; linearize_objective::Bool=false,  probabil
         if linearize_objective
             for i in 1:qterms
                 qval = quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])^2
-                if getValue(qlinterm[i]) <= qval - 1e-6 # optimality tolerance
+                if getValue(qlinterm[i]) <= qval - objective_linearization_tolerance
                     # add another linearization
                     nviol_obj += 1
                     @addConstraint(m, qlinterm[i] >= -qval + 2*quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])*quadobj.qvars1[i])
