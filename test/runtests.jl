@@ -25,8 +25,8 @@ let
     addConstraint(m, c, with_probability=0.05)
     @test conToStr(CCJuMP.getCCData(m).chanceconstr[1]) == "(3 v + 1)*x + -10 <= 0, with probability 0.05"
 
-    @test_throws @defIndepNormal(m, q, mean=1, var=-1)
-    @test_throws @defIndepNormal(m, q, mean=1, var=(-1,1))
+    @test_throws ErrorException @defIndepNormal(m, q, mean=1, var=-1)
+    @test_throws ErrorException @defIndepNormal(m, q, mean=1, var=(-1,1))
 
     @test affToStr(z[1]+z[2]-2z[3]+10) == "(1.0)*z[1] + (1.0)*z[2] + (-2.0)*z[3] + 10.0"
 

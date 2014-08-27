@@ -1,7 +1,7 @@
 include("distributions.jl")
 import MathProgBase
 
-function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false)
+function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60)
     @assert method == :Reformulate || method == :Cuts
 
     ccdata = getCCData(m)
@@ -39,9 +39,9 @@ function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,pro
     else
         # check that we have pure chance constraints
         if no_uncertains
-            solvecc_cuts(m, probability_tolerance=probability_tolerance, linearize_objective=linearize_objective, debug=debug)
+            solvecc_cuts(m, probability_tolerance=probability_tolerance, linearize_objective=linearize_objective, debug=debug, iteration_limit=iteration_limit)
         else
-            solverobustcc_cuts(m,probability_tolerance=probability_tolerance, linearize_objective=linearize_objective, debug=debug)
+            solverobustcc_cuts(m,probability_tolerance=probability_tolerance, linearize_objective=linearize_objective, debug=debug, iteration_limit=iteration_limit)
         end
     end
 
@@ -50,7 +50,7 @@ function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,pro
 end
 
 
-function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tolerance::Float64=NaN, debug=true)
+function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tolerance::Float64=NaN, debug=true, iteration_limit::Int=60)
 
     ccdata = getCCData(m)
 
@@ -152,6 +152,7 @@ function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tol
             for i in 1:qterms
                 qval = quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])^2
                 if getValue(qlinterm[i]) <= qval - 1e-6 # optimality tolerance
+                    debug && println("Linerization violation: ", qval - getValue(qlinterm[i]))
                     # add another linearization
                     nviol_obj += 1
                     if in_callback
@@ -187,9 +188,8 @@ function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tol
     end
 
 
-    const MAXITER = 60 # make a parameter
     niter = 0
-    while niter < MAXITER
+    while niter < iteration_limit
 
         nviol, nviol_obj = addcuts(nothing)
  
@@ -212,7 +212,7 @@ function solvecc_cuts(m::Model; linearize_objective::Bool=false, probability_tol
 
 end
 
-function solverobustcc_cuts(m::Model; linearize_objective::Bool=false,  probability_tolerance::Float64=NaN, debug=true)
+function solverobustcc_cuts(m::Model; linearize_objective::Bool=false,  probability_tolerance::Float64=NaN, debug=true, iteration_limit::Int=60)
 
 
     ccdata = getCCData(m)
@@ -292,9 +292,8 @@ function solverobustcc_cuts(m::Model; linearize_objective::Bool=false,  probabil
         return status
     end
 
-    const MAXITER = 40 # make a parameter
     niter = 0
-    while niter < MAXITER
+    while niter < iteration_limit
 
         nviol = 0
         # check violated chance constraints
