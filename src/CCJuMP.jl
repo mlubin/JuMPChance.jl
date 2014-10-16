@@ -99,15 +99,15 @@ Base.convert(::Type{CCAffExpr},a::RandomAffExpr) = CCAffExpr(a.vars,[convert(Aff
 function affToStr(a::CCAffExpr)
 
     if length(a.vars) == 0
-        return affToStr(a.constant)
+        return JuMP.aff_str(JuMP.REPLMode,a.constant)
     end
     
     m = a.vars[1].m
     ccdata = getCCData(m)
 
     # don't merge duplicates (yet)
-    strs = ["($(affToStr(a.coeffs[i],true)))*$(ccdata.RVnames[a.vars[i].idx])" for i in 1:length(a.vars)]
-    return string(join(strs," + "), " + ", affToStr(a.constant,true))
+    strs = ["($(JuMP.aff_str(JuMP.REPLMode,a.coeffs[i], show_constant=true)))*$(ccdata.RVnames[a.vars[i].idx])" for i in 1:length(a.vars)]
+    return string(join(strs," + "), " + ", JuMP.aff_str(JuMP.REPLMode, a.constant, show_constant=true))
 end
 
 

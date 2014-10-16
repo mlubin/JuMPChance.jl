@@ -54,7 +54,7 @@ function solvecc_cuts(m::Model, probability_tolerance::Float64, linearize_object
 
     ccdata = getCCData(m)
 
-    has_integers = any(m.colCat .== JuMP.INTEGER)
+    has_integers = any(m.colCat .== :Int)
 
     # set up slack variables and linear constraints
     nconstr = length(ccdata.chanceconstr)
