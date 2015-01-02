@@ -1,12 +1,46 @@
 include("distributions.jl")
 import MathProgBase
 
-function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6)
+function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false)
     @assert method == :Reformulate || method == :Cuts
 
     ccdata = getCCData(m)
     no_uncertains = all([isa(x,Real) for x in ccdata.RVmeans]) && all([isa(x,Real) for x in ccdata.RVvars])
     probability_tolerance > 0 || error("Invalid probability tolerance $probability_tolerance")
+
+
+    if isa(m.solver,ECOS.ECOSSolver)
+        reformulate_quadobj_to_conic = true
+    end
+    if reformulate_quadobj_to_conic
+        # Use SOC representation of quadratic objective terms
+        # for pure conic solvers (Mosek, ECOS).
+        # Currently only diagonal terms supported
+        qterms = length(m.obj.qvars1)
+        quadobj::QuadExpr = m.obj
+        if qterms != 0
+            # we have quadratic terms
+            # assume no duplicates for now
+            for i in 1:qterms
+                if quadobj.qvars1[i].col != quadobj.qvars2[i].col
+                    error("Only diagonal quadratic objective terms currently supported")
+                end
+            end
+            if m.objSense != :Min
+                error("Only minimization is currently supported (this is easy to fix)")
+            end
+            # x^2 <= t iff
+            # exists y,z s.t. x^2 + y^2 <= z^2
+            # z >= 0, y = z - 1, t = 2z-1, t >= 0
+            @defVar(m, quadobj_y[1:qterms])
+            @defVar(m, quadobj_z[1:qterms] >= 0)
+            @defVar(m, quadobj_t[1:qterms] >= 0)
+            @addConstraint(m, quadobj_soc[i=1:qterms], (quadobj.qvars1[i])^2 + quadobj_y[i]^2 <= quadobj_z[i]^2)
+            @addConstraint(m, quadobj_eq1[i=1:qterms], quadobj_y[i] == quadobj_z[i] - 1)
+            @addConstraint(m, quadobj_eq2[i=1:qterms], quadobj_t[i] == 2quadobj_z[i] - 1)
+            @setObjective(m, m.objSense, quadobj.aff + sum{quadobj.qcoeffs[i]*quadobj_t[i], i=1:qterms})
+        end
+    end
 
     if method == :Reformulate
         @assert !linearize_objective # not supported

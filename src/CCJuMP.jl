@@ -3,6 +3,7 @@
 
 module CCJuMP
 importall JuMP
+import ECOS # For now, set ECOS as default since it's the only open-source conic solver availible
 
 export CCModel,
     IndepNormal,
@@ -27,7 +28,7 @@ type CCData
     RVnames
 end
 
-function CCModel(;solver=JuMP.UnsetSolver())
+function CCModel(;solver=ECOS.ECOSSolver())
     m = Model(solver=solver)
     m.ext[:ChanceConstr] = CCData(Any[],0,Any[],Any[],String[])
     return m
