@@ -9,7 +9,7 @@ function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,pro
     probability_tolerance > 0 || error("Invalid probability tolerance $probability_tolerance")
 
 
-    if isa(m.solver,ECOS.ECOSSolver)
+    if isa(m.solver,ECOS.ECOSSolver) && !linearize_objective
         reformulate_quadobj_to_conic = true
     end
     if reformulate_quadobj_to_conic
@@ -22,13 +22,9 @@ function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,pro
             # we have quadratic terms
             # assume no duplicates for now
             for i in 1:qterms
-                if quadobj.qvars1[i].col != quadobj.qvars2[i].col
-                    error("Only diagonal quadratic objective terms currently supported")
-                end
+                (quadobj.qvars1[i].col == quadobj.qvars2[i].col) || error("Only diagonal quadratic objective terms currently supported")
             end
-            if m.objSense != :Min
-                error("Only minimization is currently supported (this is easy to fix)")
-            end
+            m.objSense == :Min || error("Only minimization is currently supported (this is easy to fix)")
             # x^2 <= t iff
             # exists y,z s.t. x^2 + y^2 <= z^2
             # z >= 0, y = z - 1, t = 2z-1, t >= 0
@@ -88,7 +84,7 @@ function solvecc_cuts(m::Model, probability_tolerance::Float64, linearize_object
 
     ccdata = getCCData(m)
 
-    has_integers = any(m.colCat .== :Int)
+    has_integers = any(c-> c != :Cont, m.colCat)
 
     # set up slack variables and linear constraints
     nconstr = length(ccdata.chanceconstr)
@@ -117,13 +113,9 @@ function solvecc_cuts(m::Model, probability_tolerance::Float64, linearize_object
         # we have quadratic terms
         # assume no duplicates for now
         for i in 1:qterms
-            if quadobj.qvars1[i].col != quadobj.qvars2[i].col
-                error("Only diagonal quadratic objective terms currently supported")
-            end
+            (quadobj.qvars1[i].col == quadobj.qvars2[i].col) || error("Only diagonal quadratic objective terms currently supported")
         end
-        if m.objSense != :Min
-            error("Only minimization is currently supported (this is easy to fix)")
-        end
+        m.objSense == :Min || error("Only minimization is currently supported (this is easy to fix)")
         # qlinterm[i] >= qcoeffs[i]*qvars1[i]^2
         @defVar(m, qlinterm[1:qterms] >= 0)
         # it would help to add some initial linearizations
@@ -200,20 +192,18 @@ function solvecc_cuts(m::Model, probability_tolerance::Float64, linearize_object
         return nviol, nviol_obj
     end
     
-    if debug && !has_integers
-        println("Solving deterministic model")
-    end
+    (debug && !has_integers) && println("Solving deterministic model")
 
     do_lazy = has_integers
     #do_lazy = false
     if do_lazy
         setLazyCallback(m, addcuts, fractional=true)
     end
-    tic()
+    #tic()
     status = solve(m)
 
     if do_lazy
-        toc()
+        #toc()
         return status
     end
     
@@ -229,7 +219,7 @@ function solvecc_cuts(m::Model, probability_tolerance::Float64, linearize_object
  
         if nviol == 0 && nviol_obj == 0
             println("Done after $niter iterations")
-            toc()
+            #toc()
             return :Optimal
         else
             println("Iteration $niter: $nviol constraint violations, $nviol_obj objective linearization violations")
@@ -261,13 +251,9 @@ function solverobustcc_cuts(m::Model, probability_tolerance::Float64, linearize_
         # we have quadratic terms
         # assume no duplicates for now
         for i in 1:qterms
-            if quadobj.qvars1[i].col != quadobj.qvars2[i].col
-                error("Only diagonal quadratic objective terms currently supported")
-            end
+            (quadobj.qvars1[i].col == quadobj.qvars2[i].col) || error("Only diagonal quadratic objective terms currently supported")
         end
-        if m.objSense != :Min
-            error("Only minimization is currently supported (this is easy to fix)")
-        end
+        m.objSense == :Min || error("Only minimization is currently supported (this is easy to fix)")
         # qlinterm[i] >= qcoeffs[i]*qvars1[i]^2
         @defVar(m, qlinterm[1:qterms] >= 0)
         # it would help to add some initial linearizations

@@ -24,14 +24,31 @@ let
     @test conToStr(c) == "(3 v + 1)*x + -10 <= 0"
     addConstraint(m, c, with_probability=0.05)
     @test conToStr(CCJuMP.getCCData(m).chanceconstr[1]) == "(3 v + 1)*x + -10 <= 0, with probability 0.05"
+    @test_throws ErrorException addConstraint(m, c, with_probability=10.0)
+
+    ccaff = CCJuMP.CCAffExpr()
+    ccaff.constant = 2v
+    @test affToStr(ccaff) == "2 v"
+
+    raff = 3x
+    @test isa(raff, CCJuMP.RandomAffExpr)
+    @test affToStr(raff) == "(3.0)*x + 0.0"
+    raff = CCJuMP.RandomAffExpr()
+    raff.constant = 10
+    @test affToStr(raff) == "10.0"
+
 
     @test_throws ErrorException @defIndepNormal(m, q, mean=1, var=-1)
     @test_throws ErrorException @defIndepNormal(m, q, mean=1, var=(-1,1))
+    @test beginswith(macroexpand(:(@defIndepNormal(m, f(x), mean=1, var=1))).args[1].msg,"Syntax error: Expected")
 
     @test affToStr(z[1]+z[2]-2z[3]+10) == "(1.0)*z[1] + (1.0)*z[2] + (-2.0)*z[3] + 10.0"
 
     @test affToStr(v*(x-1)) == "(v)*x + -v"
     @test affToStr(x*(v-1)) == "(v - 1)*x + 0"
+
+    jm = Model()
+    @test_throws ErrorException CCJuMP.getCCData(jm)
 
 end
 
@@ -43,6 +60,21 @@ let
 
         @setObjective(m, Min, z)
         addConstraint(m, z*x <= -1, with_probability=0.05)
+
+        status = solvecc(m, method=method)
+        @test status == :Optimal
+        @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
+    end
+end
+# flipped constraint sense
+let
+    for method in [:Reformulate,:Cuts]
+        m = CCModel()
+        @defIndepNormal(m, x, mean=0, var=1)
+        @defVar(m, z >= -100) # so original problem is bounded
+
+        @setObjective(m, Min, z)
+        addConstraint(m, -z*x >= 1, with_probability=0.05)
 
         status = solvecc(m, method=method)
         @test status == :Optimal
@@ -93,6 +125,18 @@ let
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
 end
+let
+    m = CCModel()
+    @defIndepNormal(m, x, mean=0,var=(0.95,1.05))
+
+    @defVar(m, z >= -100)
+    @setObjective(m, Min, z)
+
+    addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
+    status = solvecc(m, method=:Cuts)
+    @test status == :Optimal
+    @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
+end
 
 # flipped signs
 let
@@ -110,28 +154,33 @@ end
 
 # quadratic objective
 let
-    m = CCModel()
-    @defIndepNormal(m, x, mean=0,var=1)
+    for method in [:Reformulate, :Cuts], linearize in [true, false]
+        (method == :Reformulate && linearize) && continue
+        m = CCModel()
+        @defIndepNormal(m, x, mean=0,var=1)
 
-    @defVar(m, z >= -100)
-    @setObjective(m, Min, z+2z^2)
+        @defVar(m, z >= -100)
+        @setObjective(m, Min, z+2z^2)
 
-    addConstraint(m, z*x <= -1, with_probability=0.05)
-    status = solvecc(m, method=:Cuts, debug=true)
-    @test status == :Optimal
-    @test_approx_eq_eps getValue(z) -1/4 1e-4
+        addConstraint(m, z*x <= -1, with_probability=0.05)
+        status = solvecc(m, method=method, linearize_objective=linearize)
+        @test status == :Optimal
+        @test_approx_eq_eps getValue(z) -1/4 1e-4
+    end
 end
 let
-    m = CCModel()
-    @defIndepNormal(m, x, mean=(-1,1),var=1)
+    for linearize in [true, false]
+        m = CCModel()
+        @defIndepNormal(m, x, mean=(-1,1),var=1)
 
-    @defVar(m, z >= -100)
-    @setObjective(m, Min, z+2z^2)
+        @defVar(m, z >= -100)
+        @setObjective(m, Min, z+2z^2)
 
-    addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
-    status = solvecc(m, method=:Cuts, debug=true)
-    @test status == :Optimal
-    @test_approx_eq_eps getValue(z) -1/4 1e-4
+        addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
+        status = solvecc(m, method=:Cuts, linearize_objective=linearize)
+        @test status == :Optimal
+        @test_approx_eq_eps getValue(z) -1/4 1e-4
+    end
 end
 
 # uncertainty budget for mean
