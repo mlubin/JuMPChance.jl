@@ -5,6 +5,7 @@
 (+)(lhs::IndepNormal,rhs::IndepNormal) = RandomAffExpr([lhs,rhs],[1.0,1.0],0.0)
 (-)(lhs::IndepNormal,rhs::IndepNormal) = RandomAffExpr([lhs,rhs],[1.0,-1.0],0.0)
 (/)(lhs::IndepNormal,rhs::Number) = RandomAffExpr([lhs],[1/rhs],0.0)
+(-)(rhs::IndepNormal) = RandomAffExpr([rhs],[-1.0],0.0)
 
 
 for op in (:+, :-, :*)
@@ -26,10 +27,10 @@ end
 # AffExpr
 # AffExpr--IndepNormal
 (+)(lhs::AffExpr, rhs::IndepNormal) = CCAffExpr([rhs],[convert(AffExpr,1.0)],lhs)
-(-)(lhs::AffExpr, rhs::IndepNormal) = CCAffExpr([rhs],[convert(AffExpr,1.0)],-lhs)
+(-)(lhs::AffExpr, rhs::IndepNormal) = CCAffExpr([rhs],[convert(AffExpr,-1.0)],lhs)
 (*)(lhs::AffExpr, rhs::IndepNormal) = CCAffExpr([rhs],[lhs],AffExpr())
 (+)(lhs::IndepNormal, rhs::AffExpr) = rhs+lhs
-(-)(lhs::IndepNormal, rhs::AffExpr) = (+)(rhs,-lhs)
+(-)(lhs::IndepNormal, rhs::AffExpr) = (+)(lhs,-rhs)
 (*)(lhs::IndepNormal, rhs::AffExpr) = rhs*lhs
 
 # AffExpr--CCAffExpr

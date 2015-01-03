@@ -6,9 +6,15 @@ using Distributions
 let
     m = CCModel()
     @defIndepNormal(m, x, mean=1, var=1)
+    @defIndepNormal(m, y, mean=1, var=1)
     @test affToStr(1+x) == "(1.0)*x + 1.0"
+    @test affToStr(y+x) == "(1.0)*y + (1.0)*x + 0.0"
+    @test affToStr(y-x) == "(1.0)*y + (-1.0)*x + 0.0"
+    @test affToStr(x/2) == "(0.5)*x + 0.0"
+    @test affToStr(-x) == "(-1.0)*x + 0.0"
 
     @defVar(m, v)
+    @defVar(m, q)
 
     @test affToStr((3v+1)*x+10) == "(3 v + 1)*x + 10"
 
@@ -16,6 +22,18 @@ let
     @test affToStr(v*z[1]+3.5) == "(v)*z[1] + 3.5"
     
     @test affToStr(v*z[1]+2z[2]+3.5) == "(v)*z[1] + (2)*z[2] + 3.5"
+    @test affToStr(v+(v*z[1]+2z[2]+3.5)) == "(v)*z[1] + (2)*z[2] + v + 3.5"
+    @test affToStr((v*z[1]+2z[2]+3.5)-q) == "(v)*z[1] + (2)*z[2] + -q + 3.5"
+    @test affToStr((v*z[1]+2z[2]+3.5)+q) == "(v)*z[1] + (2)*z[2] + q + 3.5"
+    @test affToStr(x*v) == "(v)*x + 0"
+    @test affToStr(x*10) == "(10.0)*x + 0.0"
+    @test affToStr(3v+x) == "(1)*x + 3 v"
+    @test affToStr(3v-x) == "(-1)*x + 3 v"
+    @test affToStr(x+3v) == "(1)*x + 3 v"
+    @test affToStr(x-3v) == "(1)*x + -3 v"
+    @test affToStr((3x+1)+v) == "(3)*x + v + 1"
+    @test affToStr((3x+1)-v) == "(3)*x + -v + 1"
+    @test affToStr((3x+1)*v) == "(3 v)*x + v"
 
     @test getMean(z[5]) == 5
     @test getVar(z[5]) == 1
@@ -25,6 +43,8 @@ let
     addConstraint(m, c, with_probability=0.05)
     @test conToStr(CCJuMP.getCCData(m).chanceconstr[1]) == "(3 v + 1)*x + -10 <= 0, with probability 0.05"
     @test_throws ErrorException addConstraint(m, c, with_probability=10.0)
+    c = (3v+1)*x + 10 >= 20
+    @test conToStr(c) == "(3 v + 1)*x + -10 >= 0"
 
     ccaff = CCJuMP.CCAffExpr()
     ccaff.constant = 2v
