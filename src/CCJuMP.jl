@@ -106,7 +106,9 @@ function affToStr(a::CCAffExpr)
     m = a.vars[1].m
     ccdata = getCCData(m)
 
-    # don't merge duplicates (yet)
+    v = IndexedVector(JuMP.AffExpr, 0)
+    a = merge_duplicates(a, v, m)
+
     strs = ["($(JuMP.aff_str(JuMP.REPLMode,a.coeffs[i], show_constant=true)))*$(ccdata.RVnames[a.vars[i].idx])" for i in 1:length(a.vars)]
     return string(join(strs," + "), " + ", JuMP.aff_str(JuMP.REPLMode, a.constant, show_constant=true))
 end
@@ -121,7 +123,9 @@ function affToStr(a::RandomAffExpr)
     m = a.vars[1].m
     ccdata = getCCData(m)
 
-    # don't merge duplicates (yet)
+    v = IndexedVector(Float64, 0)
+    a = merge_duplicates(a, v, m)
+
     strs = ["($(a.coeffs[i]))*$(ccdata.RVnames[a.vars[i].idx])" for i in 1:length(a.vars)]
     return string(join(strs," + "), " + ", string(a.constant))
 end

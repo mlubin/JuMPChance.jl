@@ -8,6 +8,12 @@ function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,pro
     no_uncertains = all([isa(x,Real) for x in ccdata.RVmeans]) && all([isa(x,Real) for x in ccdata.RVvars])
     probability_tolerance > 0 || error("Invalid probability tolerance $probability_tolerance")
 
+    # merge possible duplicate terms in constraints
+    v = IndexedVector(AffExpr, ccdata.numRVs)
+    chanceconstr::Vector{ChanceConstr} = ccdata.chanceconstr
+    for i in 1:length(chanceconstr)
+        chanceconstr[i].ccexpr = merge_duplicates(chanceconstr[i].ccexpr, v, m)
+    end
 
     if isa(m.solver,ECOS.ECOSSolver) && !linearize_objective
         reformulate_quadobj_to_conic = true
@@ -44,7 +50,7 @@ function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,pro
         no_uncertains || error("Cannot solve using reformulation, uncertain data are present")
         #display(ccdata.chanceconstr)
 
-        for cc::ChanceConstr in ccdata.chanceconstr
+        for cc in chanceconstr
             ccexpr = cc.ccexpr
             nu = quantile(Normal(0,1),1-cc.with_probability)
             nterms = length(ccexpr.vars)
@@ -443,5 +449,74 @@ function solverobustcc_cuts(m::Model, probability_tolerance::Float64, linearize_
 
     return :UserLimit # hit iteration limit
 
+
+end
+
+# We can remove the code for IndexedVector once JuMP issue #340 is resolved.
+type IndexedVector{T}
+    elts::Vector{T}
+    nzidx::Vector{Int}
+    nnz::Int
+    empty::BitArray{1}
+end
+
+IndexedVector{T}(::Type{T},n::Integer) = IndexedVector(zeros(T,n),zeros(Int,n),0,trues(n))
+
+function addelt!{T}(v::IndexedVector{T},i::Integer,val::T)
+    if v.empty[i]  # new index
+        v.elts[i] = val
+        v.nzidx[v.nnz += 1] = i
+        v.empty[i] = false
+    else
+        v.elts[i] += val
+    end
+    return nothing
+end
+
+function Base.empty!{T}(v::IndexedVector{T})
+    elts = v.elts
+    nzidx = v.nzidx
+    empty = v.empty
+    for i in 1:v.nnz
+        elts[nzidx[i]] = zero(T)
+        empty[nzidx[i]] = true
+    end
+    v.nnz = 0
+end
+
+Base.length(v::IndexedVector) = length(v.elts)
+function Base.resize!(v::IndexedVector, n::Integer)
+    if n > length(v)
+        @assert v.nnz == 0 # only resize empty vector
+        resize!(v.elts, n)
+        fill!(v.elts,0)
+        resize!(v.nzidx, n)
+        resize!(v.empty, n)
+        fill!(v.empty,true)
+    end
+end
+
+# Adapted from JuMP:
+# returns a GenericAffExpr with terms merged
+# assume that v is zero'd
+function merge_duplicates{CoefType}(aff::JuMP.GenericAffExpr{CoefType,IndepNormal}, v::IndexedVector{CoefType}, m::Model)
+    ccdata = getCCData(m)
+
+    resize!(v, ccdata.numRVs)
+    for ind in 1:length(aff.coeffs)
+        var = aff.vars[ind]
+        is(var.m, m) || error("Variable does not belong to this model")
+        addelt!(v, aff.vars[ind].idx, aff.coeffs[ind])
+    end
+    vars = Array(IndepNormal,v.nnz)
+    coeffs = Array(CoefType,v.nnz)
+    for i in 1:v.nnz
+        idx = v.nzidx[i]
+        vars[i] = IndepNormal(m,idx)
+        coeffs[i] = v.elts[idx]
+    end
+    empty!(v)
+
+    return JuMP.GenericAffExpr(vars, coeffs, aff.constant) # do we need to eliminate duplicates in the constant part also?
 
 end

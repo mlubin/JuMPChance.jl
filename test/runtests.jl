@@ -76,12 +76,12 @@ let
     @test affToStr(y-x) == "(1.0)*y + (-1.0)*x + 0.0"
     # IndepNormal*IndepNormal not valid
     # IndepNormal--RandomAffExpr
-    @test affToStr(x+r) == "(2.0)*x + (1.0)*x + 1.0" # TODO: handle duplicates
-    @test affToStr(x-r) == "(-2.0)*x + (1.0)*x + -1.0"
+    @test affToStr(x+r) == "(3.0)*x + 1.0"
+    @test affToStr(x-r) == "(-1.0)*x + -1.0"
     # IndepNormal*RandomAffExpr not valid
     # IndepNormal--CCAffExpr
-    @test affToStr(x+r2) == "(2 v + 1)*x + (1)*x + 1"
-    @test affToStr(x-r2) == "(-2 v - 1)*x + (1)*x + -1"
+    @test affToStr(x+r2) == "(2 v + 2)*x + 1"
+    @test affToStr(x-r2) == "(-2 v)*x + -1"
     # IndepNormal*CCAffExpr not valid
 
     # RandomAffExpr
@@ -107,8 +107,8 @@ let
     @test affToStr(r-(3y-1)) == "(2.0)*x + (-3.0)*y + 2.0"
     # RandomAffExpr*RandomAffExpr not valid
     # RandomAffExpr--CCAffExpr
-    @test affToStr(r+r2) == "(2)*x + (2 v + 1)*x + 2"
-    @test affToStr(r-r2) == "(2)*x + (-2 v - 1)*x + 0"
+    @test affToStr(r+r2) == "(2 v + 3)*x + 2"
+    @test affToStr(r-r2) == "(-2 v + 1)*x + 0"
     # RandomAffExpr*CCAffExpr not valid
 
     # CCAffExpr
@@ -130,12 +130,12 @@ let
     @test affToStr(r2-y) == "(2 v + 1)*x + (-1)*y + 1"
     # CCAffExpr*IndepNormal not valid
     # CCAffExpr--RandomAffExpr
-    @test affToStr(r2+r) == "(2 v + 1)*x + (2)*x + 2"
-    @test affToStr(r2-r) == "(2 v + 1)*x + (-2)*x + 0"
+    @test affToStr(r2+r) == "(2 v + 3)*x + 2"
+    @test affToStr(r2-r) == "(2 v - 1)*x + 0"
     # CCAffExpr*RandomAffExpr not valid
     # CCAffExpr--CCAffExpr
-    @test affToStr(r2+r2) == "(2 v + 1)*x + (2 v + 1)*x + 2"
-    @test affToStr(r2-r2) == "(2 v + 1)*x + (-2 v - 1)*x + 0"
+    @test affToStr(r2+r2) == "(4 v + 2)*x + 2"
+    @test affToStr(r2-r2) == "(0)*x + 0"
     # CCAffExpr*CCAffExpr not valid
 
 
@@ -226,6 +226,22 @@ let
 
         @setObjective(m, Min, z)
         addConstraint(m, z*(x/2-1) <= -1, with_probability=0.05)
+
+        status = solvecc(m, method=method)
+        @test status == :Optimal
+        @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
+    end
+end
+
+# duplicate terms
+let
+    for method in [:Reformulate,:Cuts]
+        m = CCModel()
+        @defIndepNormal(m, x, mean=0, var=1)
+        @defVar(m, z >= -100) # so original problem is bounded
+
+        @setObjective(m, Min, z)
+        addConstraint(m, (1/2)z*x + (1/2)z*x <= -1, with_probability=0.05)
 
         status = solvecc(m, method=method)
         @test status == :Optimal
