@@ -4,31 +4,35 @@
 Quick Start Guide
 -----------------
 
-This quick start guide will introduce the syntax of CCJuMP, again assuming
+This quick start guide will introduce the syntax of JuMPChance, again assuming
 familiarity with JuMP.
 
 
 Creating a Model
 ^^^^^^^^^^^^^^^^
 
-CCJuMP models should be created by using the following constructor::
+JuMPChance models should be created by using the following constructor::
 
-    m = CCModel()
+    m = ChanceModel()
 
 All variables and constraints are associated with this model object.
 As in JuMP, solvers can be specified by using the ``solver=`` argument to the constructor.
 For example::
 
     using CPLEX
-    m = CCModel(solver=CplexSolver())
+    m = ChanceModel(solver=CplexSolver())
 
 will set the solver to CPLEX, assuming that both CPLEX and the corresponding
 Julia package are properly installed.
 
+By default, JuMPChance will use `ECOS <https://github.com/JuliaOpt/ECOS.jl>`_,
+a lightweight open-source solver which supports the conic constraints needed for the
+reformulation method for solving chance-constrained problems.
+
 Defining Variables
 ^^^^^^^^^^^^^^^^^^
 
-In CCJuMP, you can mix decision variables and random variables in expressions.
+In JuMPChance, you can mix decision variables and random variables in expressions.
 Decision variables are declared by using JuMP's ``@defVar`` syntax.
 Random variables are declared by using a similar syntax::
 
@@ -55,7 +59,7 @@ defines two variables ``x[:cat]`` and ``x[:dog]``.
 Chance Constraints
 ^^^^^^^^^^^^^^^^^^
 
-A CCJuMP model may contain a combination of standard JuMP constraints
+A JuMPChance model may contain a combination of standard JuMP constraints
 (linear and quadratic) and chance constraints.
 
 Chance constraints are constraints which contain a mix of decision
@@ -111,7 +115,7 @@ this is
 
 Using the above notation, let the uncertainty interval on the mean of :math:`z_i` be :math:`[\hat\mu_i - \alpha_i,\hat\mu_i + \alpha_i]` and on the variance :math:`[\hat\sigma_i^2 - \beta_i, \hat\sigma_i^2 + \beta_i]` where :math:`\alpha_i \geq 0` and :math:`\beta_i \geq 0`.
 
-Currently CCJuMP supports only the following uncertainty sets on the means and variances:
+Currently JuMPChance supports only the following uncertainty sets on the means and variances:
 
 .. math::
     M = \left\{ (\mu_1,\ldots,\mu_k) : \exists (s_1,\ldots,s_k) \text{ such that }\mu_i = \hat\mu_i + s_i, |s_i| \leq \alpha_i, \sum_{i=1}^k \frac{|s_i|}{\alpha_i} \leq \Gamma_\mu \right\}
@@ -130,19 +134,19 @@ Solving the model
 
 After the model `m` has been created and all constraints added, calling::
 
-    solvecc(m,method=:Cuts)
+    solvechance(m,method=:Cuts)
 
 or::
 
-    solvecc(m,method=:Reformulate)
+    solvechance(m,method=:Reformulate)
 
-will tell CCJuMP to solve the model. The available solution methods are described
+will tell JuMPChance to solve the model. The available solution methods are described
 in the following section.
 
-The ``solvecc`` function also returns a solution status. This should be checked
+The ``solvechance`` function also returns a solution status. This should be checked
 to confirm that the model was successfully solved to optimality, for example::
 
-    status = solvecc(m)
+    status = solvechance(m)
     if status == :Optimal
         println("Solved to optimality")
     else

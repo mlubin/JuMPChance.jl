@@ -1,7 +1,7 @@
-CCJuMP.jl Documentation README
-================================
+JuMPChance.jl Documentation README
+==================================
 
-CCJuMP.jl's documentation is written in reStructuredText, a good reference for which
+JuMPChance.jl's documentation is written in reStructuredText, a good reference for which
 is the [Documenting Python](http://docs.python.org/devguide/documenting.html)
 chapter of the Python Developer's Guide.
 

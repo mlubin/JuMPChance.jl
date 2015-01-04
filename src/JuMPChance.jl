@@ -11,9 +11,9 @@ export ChanceModel,
     getMean,
     getVar,
     getStdev,
-    solvecc,
+    solvechance,
+    solvecc, # deprecated
     @defIndepNormal
-
 
 # stores extension data inside JuMP Model
 type CCData

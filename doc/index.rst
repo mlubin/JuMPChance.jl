@@ -1,18 +1,29 @@
-========================================================
-CCJuMP --- JuMP extensions for robust chance constraints
-========================================================
+=====================================================
+JuMPChance --- JuMP extensions for chance constraints
+=====================================================
 
-.. module:: CCJuMP
+.. module:: JuMPChance
    :synopsis: JuMP extensions for robust chance constraints
 
-`CCJuMP <https://github.com/mlubin/CCJuMP.jl>`_ is an extension for 
+`JuMPChance <https://github.com/mlubin/JuMPChance.jl>`_ is an extension for
 `JuMP <https://github.com/JuliaOpt/JuMP.jl>`_. We assume that the reader
 is familiar with the syntax of JuMP, which is described
 in its `documentation <http://jump.readthedocs.org/en/latest/>`_.
 
-CCJuMP supports a particular class of chance constraints, namely those involving affine combinations of jointly normal random variables. Distributionally robust chance constraints are supported in the form of intervals on the mean and variance of the normally distributed random variables.
+JuMPChance supports a particular class of chance constraints, namely those involving affine combinations of jointly normal random variables. Distributionally robust chance constraints are supported in the form of intervals on the mean and variance of the normally distributed random variables.
 
-CCJuMP is currently experimental code and is not publicly released (despite the code being available). Contact the authors if you are interested in using CCJuMP.
+JuMPChance is research code and not officially supported as part of JuMP. JuMPChance is released unter the terms of the `LGPL <http://www.gnu.org/licenses/lgpl-3.0.txt>`_ licence version 3:
+
+.. code-block:: none
+
+    JuMPChance is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License,
+    Version 3, as published by the Free Software Foundation.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
 Contents
 --------

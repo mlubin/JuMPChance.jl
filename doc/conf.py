@@ -48,7 +48,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'CCJuMP -- JuMP extensions for (robust) chance constraints'
+project = u'JuMPChance -- JuMP extensions for chance constraints'
 AUTHORS = u"Miles Lubin"
 copyright = u'2014, '+AUTHORS
 
@@ -176,7 +176,7 @@ highlight_language = 'julia'
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'CCJuMPJlDoc'
+htmlhelp_basename = 'JuMPChanceJlDoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -202,7 +202,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('ccjump', 'CCJuMP.jl.tex', u'CCJuMP.jl Documentation',
+  ('jumpchance', 'JuMPChance.jl.tex', u'JuMPChance Documentation',
    AUTHORS, 'manual'),
 ]
 
@@ -232,7 +232,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('ccjump', 'CCJuMP', u'CCJuMP.jl Documentation',
+    ('jumpchance', 'JuMPChance', u'JuMPChance Documentation',
      [AUTHORS], 1)
 ]
 
@@ -246,8 +246,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('ccjump', 'CCJuMP', u'CCJuMP.jl Documentation',
-   AUTHORS, 'CCJuMP', 'CCJuMP -- Julia for Mathematical Programming.',
+  ('jumpchance', 'JuMPChance', u'JuMPChance.jl Documentation',
+   AUTHORS, 'JuMPChance', 'JuMPChance -- Julia for Mathematical Programming.',
    'Miscellaneous'),
 ]
 

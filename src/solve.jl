@@ -1,7 +1,7 @@
 include("distributions.jl")
 import MathProgBase
 
-function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false)
+function solvechance(m::Model;method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false)
     @assert method == :Reformulate || method == :Cuts
 
     ccdata = getCCData(m)
@@ -82,6 +82,12 @@ function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,pro
 
 
 
+end
+
+function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false)
+
+    Base.warn_once("solvecc is deprecated. Use solvechance instead!")
+    return solvechance(m, method=method, linearize_objective=linearize_objective, probability_tolerance=probability_tolerance, iteration_limit=iteration_limit, objective_linearization_tolerance=objective_linearization_tolerance, reformulate_quadobj_to_conic=reformulate_quadobj_to_conic)
 end
 
 
