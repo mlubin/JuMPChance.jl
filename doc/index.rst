@@ -12,7 +12,7 @@ in its `documentation <http://jump.readthedocs.org/en/latest/>`_.
 
 JuMPChance supports a particular class of chance constraints, namely those involving affine combinations of jointly normal random variables. Distributionally robust chance constraints are supported in the form of intervals on the mean and variance of the normally distributed random variables.
 
-JuMPChance is research code and not officially supported as part of JuMP. JuMPChance is released unter the terms of the `LGPL <http://www.gnu.org/licenses/lgpl-3.0.txt>`_ licence version 3:
+JuMPChance is research code and not officially supported as part of JuMP. JuMPChance is released under the terms of the `LGPL <http://www.gnu.org/licenses/lgpl-3.0.txt>`_ license version 3:
 
 .. code-block:: none
 
@@ -34,4 +34,5 @@ Contents
     installation.rst
     quickstart.rst
     solution.rst
+    references.rst
 

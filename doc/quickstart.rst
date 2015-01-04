@@ -8,7 +8,7 @@ This quick start guide will introduce the syntax of JuMPChance, again assuming
 familiarity with JuMP.
 
 
-Creating a Model
+Creating a model
 ^^^^^^^^^^^^^^^^
 
 JuMPChance models should be created by using the following constructor::
@@ -29,7 +29,7 @@ By default, JuMPChance will use `ECOS <https://github.com/JuliaOpt/ECOS.jl>`_,
 a lightweight open-source solver which supports the conic constraints needed for the
 reformulation method for solving chance-constrained problems.
 
-Defining Variables
+Defining variables
 ^^^^^^^^^^^^^^^^^^
 
 In JuMPChance, you can mix decision variables and random variables in expressions.
@@ -56,7 +56,7 @@ Index sets do not need to be ranges; they may be arbitrary Julia lists::
 
 defines two variables ``x[:cat]`` and ``x[:dog]``.
 
-Chance Constraints
+Chance constraints
 ^^^^^^^^^^^^^^^^^^
 
 A JuMPChance model may contain a combination of standard JuMP constraints
@@ -93,7 +93,7 @@ Chance constraints of the above form are added by using the ``addConstraint`` fu
 Adds the constraint :math:`P(z*x \leq -1) < 0.05`. Note that the ``with_probability`` argument specifies the *maximum* probability :math:`\epsilon` with which the constraint may be satisfied, and so should be a small number.
 
 
-Distributionally Robust Chance Constraints
+Distributionally robust chance constraints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 One may also specify normally distributed random variables whose parameters
