@@ -1,11 +1,11 @@
 # extensions to JuMP for (robust) chance constraints
 
 
-module CCJuMP
+module JuMPChance
 importall JuMP
 import ECOS # For now, set ECOS as default since it's the only open-source conic solver availible
 
-export CCModel,
+export ChanceModel,
     IndepNormal,
     affToStr,
     getMean,
@@ -28,7 +28,7 @@ type CCData
     RVnames
 end
 
-function CCModel(;solver=ECOS.ECOSSolver())
+function ChanceModel(;solver=ECOS.ECOSSolver())
     m = Model(solver=solver)
     m.ext[:ChanceConstr] = CCData(Any[],0,Any[],Any[],String[])
     return m
@@ -38,7 +38,7 @@ function getCCData(m::Model)
     if haskey(m.ext, :ChanceConstr)
         return m.ext[:ChanceConstr]::CCData
     else
-        error("This functionality is only available for CCJuMP models")
+        error("This functionality is only available for JuMPChance models")
     end
 end
 

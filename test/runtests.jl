@@ -1,10 +1,10 @@
-using CCJuMP, JuMP
+using JuMPChance, JuMP
 using Base.Test
 using Distributions
 
 
 let
-    m = CCModel()
+    m = ChanceModel()
     @defIndepNormal(m, x, mean=1, var=1)
     @defIndepNormal(m, y, mean=1, var=1)
     @defVar(m, v)
@@ -145,16 +145,16 @@ let
     c = (3v+1)*x + 10 <= 20
     @test conToStr(c) == "(3 v + 1)*x + -10 <= 0"
     addConstraint(m, c, with_probability=0.05)
-    @test conToStr(CCJuMP.getCCData(m).chanceconstr[1]) == "(3 v + 1)*x + -10 <= 0, with probability 0.05"
+    @test conToStr(JuMPChance.getCCData(m).chanceconstr[1]) == "(3 v + 1)*x + -10 <= 0, with probability 0.05"
     @test_throws ErrorException addConstraint(m, c, with_probability=10.0)
     c = (3v+1)*x + 10 >= 20
     @test conToStr(c) == "(3 v + 1)*x + -10 >= 0"
 
-    ccaff = CCJuMP.CCAffExpr()
+    ccaff = JuMPChance.CCAffExpr()
     ccaff.constant = 2v
     @test affToStr(ccaff) == "2 v"
 
-    raff = CCJuMP.RandomAffExpr()
+    raff = JuMPChance.RandomAffExpr()
     raff.constant = 10
     @test affToStr(raff) == "10.0"
 
@@ -169,13 +169,13 @@ let
     @test affToStr(x*(v-1)) == "(v - 1)*x + 0"
 
     jm = Model()
-    @test_throws ErrorException CCJuMP.getCCData(jm)
+    @test_throws ErrorException JuMPChance.getCCData(jm)
 
 end
 
 let
     for method in [:Reformulate,:Cuts]
-        m = CCModel()
+        m = ChanceModel()
         @defIndepNormal(m, x, mean=0, var=1)
         @defVar(m, z >= -100) # so original problem is bounded
 
@@ -190,7 +190,7 @@ end
 # flipped constraint sense
 let
     for method in [:Reformulate,:Cuts]
-        m = CCModel()
+        m = ChanceModel()
         @defIndepNormal(m, x, mean=0, var=1)
         @defVar(m, z >= -100) # so original problem is bounded
 
@@ -206,7 +206,7 @@ end
 # invariance to transformations
 let
     for method in [:Reformulate,:Cuts]
-        m = CCModel()
+        m = ChanceModel()
         @defIndepNormal(m, x, mean=1, var=1)
         @defVar(m, z >= -100) # so original problem is bounded
 
@@ -220,7 +220,7 @@ let
 end
 let
     for method in [:Reformulate,:Cuts]
-        m = CCModel()
+        m = ChanceModel()
         @defIndepNormal(m, x, mean=2, var=4)
         @defVar(m, z >= -100) # so original problem is bounded
 
@@ -236,7 +236,7 @@ end
 # duplicate terms
 let
     for method in [:Reformulate,:Cuts]
-        m = CCModel()
+        m = ChanceModel()
         @defIndepNormal(m, x, mean=0, var=1)
         @defVar(m, z >= -100) # so original problem is bounded
 
@@ -251,7 +251,7 @@ end
 
 # robust but no uncertainty budget
 let
-    m = CCModel()
+    m = ChanceModel()
     @defIndepNormal(m, x, mean=(-1,1),var=1)
 
     @defVar(m, z >= -100)
@@ -263,7 +263,7 @@ let
     @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
 end
 let
-    m = CCModel()
+    m = ChanceModel()
     @defIndepNormal(m, x, mean=0,var=(0.95,1.05))
 
     @defVar(m, z >= -100)
@@ -277,7 +277,7 @@ end
 
 # flipped signs
 let
-    m = CCModel()
+    m = ChanceModel()
     @defIndepNormal(m, x, mean=(-1,1),var=1)
 
     @defVar(m, z >= -100)
@@ -293,7 +293,7 @@ end
 let
     for method in [:Reformulate, :Cuts], linearize in [true, false]
         (method == :Reformulate && linearize) && continue
-        m = CCModel()
+        m = ChanceModel()
         @defIndepNormal(m, x, mean=0,var=1)
 
         @defVar(m, z >= -100)
@@ -307,7 +307,7 @@ let
 end
 let
     for linearize in [true, false]
-        m = CCModel()
+        m = ChanceModel()
         @defIndepNormal(m, x, mean=(-1,1),var=1)
 
         @defVar(m, z >= -100)
@@ -322,7 +322,7 @@ end
 
 # uncertainty budget for mean
 let
-    m = CCModel()
+    m = ChanceModel()
     @defIndepNormal(m, x, mean=(-1,1),var=1)
 
     @defVar(m, z >= -100)
@@ -336,7 +336,7 @@ end
 
 # uncertain variance, but no budget
 let
-    m = CCModel()
+    m = ChanceModel()
     @defIndepNormal(m, x, mean=(-1,1),var=(0.95,1.05))
 
     @defVar(m, z >= -100)
@@ -350,7 +350,7 @@ end
 
 # uncertain variance, with budget
 let
-    m = CCModel()
+    m = ChanceModel()
     @defIndepNormal(m, x, mean=(-1,1),var=(0.95,1.05))
 
     @defVar(m, z >= -100)
@@ -364,7 +364,7 @@ end
 
 # shifted
 let
-    m = CCModel()
+    m = ChanceModel()
     @defIndepNormal(m, x, mean=(0,2),var=(0.95,1.05))
 
     @defVar(m, z >= -100)
@@ -378,7 +378,7 @@ end
 
 # rescaled variable
 let
-    m = CCModel()
+    m = ChanceModel()
     @defIndepNormal(m, x, mean=(0,2),var=(0.95,1.05))
 
     @defVar(m, z >= -100)
@@ -392,7 +392,7 @@ end
 
 # more than one R.V.
 let
-    m = CCModel()
+    m = ChanceModel()
     @defIndepNormal(m, x, mean=(-1,1),var=(0.95,1.05))
     @defIndepNormal(m, y, mean=(-0.01,0.01),var=0.01)
 
