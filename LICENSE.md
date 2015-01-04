@@ -1,4 +1,4 @@
-Copyright (c) 2014: Miles Lubin.
+Copyright (c) 2015: Miles Lubin.
 
 The JuMPChance Julia module is licensed under the **[LGPL]** version 3:
 

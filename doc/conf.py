@@ -50,7 +50,7 @@ master_doc = 'index'
 # General information about the project.
 project = u'JuMPChance -- JuMP extensions for chance constraints'
 AUTHORS = u"Miles Lubin"
-copyright = u'2014, '+AUTHORS
+copyright = u'2015, '+AUTHORS
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
