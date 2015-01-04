@@ -7,33 +7,137 @@ let
     m = CCModel()
     @defIndepNormal(m, x, mean=1, var=1)
     @defIndepNormal(m, y, mean=1, var=1)
-    @test affToStr(1+x) == "(1.0)*x + 1.0"
-    @test affToStr(y+x) == "(1.0)*y + (1.0)*x + 0.0"
-    @test affToStr(y-x) == "(1.0)*y + (-1.0)*x + 0.0"
-    @test affToStr(x/2) == "(0.5)*x + 0.0"
-    @test affToStr(-x) == "(-1.0)*x + 0.0"
-
     @defVar(m, v)
     @defVar(m, q)
-
-    @test affToStr((3v+1)*x+10) == "(3 v + 1)*x + 10"
-
     @defIndepNormal(m,z[i=1:10],mean=i,var=1)
-    @test affToStr(v*z[1]+3.5) == "(v)*z[1] + 3.5"
-    
-    @test affToStr(v*z[1]+2z[2]+3.5) == "(v)*z[1] + (2)*z[2] + 3.5"
-    @test affToStr(v+(v*z[1]+2z[2]+3.5)) == "(v)*z[1] + (2)*z[2] + v + 3.5"
-    @test affToStr((v*z[1]+2z[2]+3.5)-q) == "(v)*z[1] + (2)*z[2] + -q + 3.5"
-    @test affToStr((v*z[1]+2z[2]+3.5)+q) == "(v)*z[1] + (2)*z[2] + q + 3.5"
+
+    # Number
+    # Number--IndepNormal
+    @test affToStr(1+x) == "(1.0)*x + 1.0"
+    @test affToStr(1-x) == "(-1.0)*x + 1.0"
+    @test affToStr(2x) == "(2.0)*x + 0.0"
+    # Number--RandomAffExpr
+    r = 2x+1
+    @test affToStr(1+r) == "(2.0)*x + 2.0"
+    @test affToStr(1-r) == "(-2.0)*x + 0.0"
+    @test affToStr(2r) == "(4.0)*x + 2.0"
+    # Number--CCAffExpr
+    r2 = (2v+1)*x+1
+    @test affToStr(1+r2) == "(2 v + 1)*x + 2"
+    @test affToStr(1-r2) == "(-2 v - 1)*x + 0"
+    @test affToStr(2r2) == "(4 v + 2)*x + 2"
+
+    # Variable
+    # Variable--IndepNormal
+    @test affToStr(v+x) == "(1)*x + v"
+    @test affToStr(v-x) == "(-1)*x + v"
+    @test affToStr(v*x) == "(v)*x + 0"
+    # Variable--RandomAffExpr
+    @test affToStr(v+r) == "(2)*x + v + 1"
+    @test affToStr(v-r) == "(-2)*x + v - 1"
+    @test affToStr(v*r) == "(2 v)*x + v"
+    # Variable--CCAffExpr
+    @test affToStr(v+r2) == "(2 v + 1)*x + v + 1"
+    @test affToStr(v-r2) == "(-2 v - 1)*x + v - 1"
+    # Variable*CCAffExpr not valid
+
+    # AffExpr
+    # AffExpr--IndepNormal
+    a = 2q+3
+    @test affToStr(a+x) == "(1)*x + 2 q + 3"
+    @test affToStr(a-x) == "(-1)*x + 2 q + 3"
+    @test affToStr(a*x) == "(2 q + 3)*x + 0"
+    # AffExpr--RandomAffExpr
+    @test affToStr(a+r) == "(2)*x + 2 q + 4"
+    @test affToStr(a-r) == "(-2)*x + 2 q + 2"
+    @test affToStr(a*r) == "(4 q + 6)*x + 2 q + 3"
+    # AffExpr--CCAffExpr
+    @test affToStr(a+r2) == "(2 v + 1)*x + 2 q + 4"
+    @test affToStr(a-r2) == "(-2 v - 1)*x + 2 q + 2"
+    # AffExpr*CCAffExpr not valid
+
+    # IndepNormal
+    @test affToStr(-x) == "(-1.0)*x + 0.0"
+    # IndepNormal--Number
+    @test affToStr(x+1) == "(1.0)*x + 1.0"
+    @test affToStr(x-1) == "(1.0)*x + -1.0"
+    @test affToStr(x*3) == "(3.0)*x + 0.0"
+    @test affToStr(x/2) == "(0.5)*x + 0.0"
+    # IndepNormal--Variable
+    @test affToStr(x+v) == "(1)*x + v"
+    @test affToStr(x-v) == "(1)*x + -v"
     @test affToStr(x*v) == "(v)*x + 0"
-    @test affToStr(x*10) == "(10.0)*x + 0.0"
-    @test affToStr(3v+x) == "(1)*x + 3 v"
-    @test affToStr(3v-x) == "(-1)*x + 3 v"
-    @test affToStr(x+3v) == "(1)*x + 3 v"
-    @test affToStr(x-3v) == "(1)*x + -3 v"
-    @test affToStr((3x+1)+v) == "(3)*x + v + 1"
-    @test affToStr((3x+1)-v) == "(3)*x + -v + 1"
-    @test affToStr((3x+1)*v) == "(3 v)*x + v"
+    # IndepNormal--AffExpr
+    @test affToStr(x+a) == "(1)*x + 2 q + 3"
+    @test affToStr(x-a) == "(1)*x + -2 q - 3"
+    @test affToStr(x*a) == "(2 q + 3)*x + 0"
+    # IndepNormal--IndepNormal
+    @test affToStr(y+x) == "(1.0)*y + (1.0)*x + 0.0"
+    @test affToStr(y-x) == "(1.0)*y + (-1.0)*x + 0.0"
+    # IndepNormal*IndepNormal not valid
+    # IndepNormal--RandomAffExpr
+    @test affToStr(x+r) == "(2.0)*x + (1.0)*x + 1.0" # TODO: handle duplicates
+    @test affToStr(x-r) == "(-2.0)*x + (1.0)*x + -1.0"
+    # IndepNormal*RandomAffExpr not valid
+    # IndepNormal--CCAffExpr
+    @test affToStr(x+r2) == "(2 v + 1)*x + (1)*x + 1"
+    @test affToStr(x-r2) == "(-2 v - 1)*x + (1)*x + -1"
+    # IndepNormal*CCAffExpr not valid
+
+    # RandomAffExpr
+    # RandomAffExpr--Number
+    @test affToStr(r+1) == "(2.0)*x + 2.0"
+    @test affToStr(r-1) == "(2.0)*x + 0.0"
+    @test affToStr(r*2) == "(4.0)*x + 2.0"
+    @test affToStr(r/2) == "(1.0)*x + 0.5"
+    # RandomAffExpr--Variable
+    @test affToStr(r+v) == "(2)*x + v + 1"
+    @test affToStr(r-v) == "(2)*x + -v + 1"
+    @test affToStr(r*v) == "(2 v)*x + v"
+    # RandomAffExpr--AffExpr
+    @test affToStr(r+a) == "(2)*x + 2 q + 4"
+    @test affToStr(r-a) == "(2)*x + -2 q - 2"
+    @test affToStr(r*a) == "(4 q + 6)*x + 2 q + 3"
+    # RandomAffExpr--IndepNormal
+    @test affToStr(r+y) == "(2.0)*x + (1.0)*y + 1.0"
+    @test affToStr(r-y) == "(2.0)*x + (-1.0)*y + 1.0"
+    # RandomAffExpr*IndepNormal not valid
+    # RandomAffExpr--RandomAffExpr
+    @test affToStr(r+(3y-1)) == "(2.0)*x + (3.0)*y + 0.0"
+    @test affToStr(r-(3y-1)) == "(2.0)*x + (-3.0)*y + 2.0"
+    # RandomAffExpr*RandomAffExpr not valid
+    # RandomAffExpr--CCAffExpr
+    @test affToStr(r+r2) == "(2)*x + (2 v + 1)*x + 2"
+    @test affToStr(r-r2) == "(2)*x + (-2 v - 1)*x + 0"
+    # RandomAffExpr*CCAffExpr not valid
+
+    # CCAffExpr
+    # CCAffExpr--Number
+    @test affToStr(r2+1) == "(2 v + 1)*x + 2"
+    @test affToStr(r2-1) == "(2 v + 1)*x + 0"
+    @test affToStr(r2*2) == "(4 v + 2)*x + 2"
+    @test affToStr(r2/2) == "(v + 0.5)*x + 0.5"
+    # CCAffExpr--Variable
+    @test affToStr(r2+v) == "(2 v + 1)*x + v + 1"
+    @test affToStr(r2-v) == "(2 v + 1)*x + -v + 1"
+    # CCAffExpr*Variable not valid
+    # CCAffExpr--AffExpr
+    @test affToStr(r2+a) == "(2 v + 1)*x + 2 q + 4"
+    @test affToStr(r2-a) == "(2 v + 1)*x + -2 q - 2"
+    # CCAffExpr*AffExpr not valid
+    # CCAffExpr--IndepNormal
+    @test affToStr(r2+y) == "(2 v + 1)*x + (1)*y + 1"
+    @test affToStr(r2-y) == "(2 v + 1)*x + (-1)*y + 1"
+    # CCAffExpr*IndepNormal not valid
+    # CCAffExpr--RandomAffExpr
+    @test affToStr(r2+r) == "(2 v + 1)*x + (2)*x + 2"
+    @test affToStr(r2-r) == "(2 v + 1)*x + (-2)*x + 0"
+    # CCAffExpr*RandomAffExpr not valid
+    # CCAffExpr--CCAffExpr
+    @test affToStr(r2+r2) == "(2 v + 1)*x + (2 v + 1)*x + 2"
+    @test affToStr(r2-r2) == "(2 v + 1)*x + (-2 v - 1)*x + 0"
+    # CCAffExpr*CCAffExpr not valid
+
 
     @test getMean(z[5]) == 5
     @test getVar(z[5]) == 1
@@ -50,9 +154,6 @@ let
     ccaff.constant = 2v
     @test affToStr(ccaff) == "2 v"
 
-    raff = 3x
-    @test isa(raff, CCJuMP.RandomAffExpr)
-    @test affToStr(raff) == "(3.0)*x + 0.0"
     raff = CCJuMP.RandomAffExpr()
     raff.constant = 10
     @test affToStr(raff) == "10.0"

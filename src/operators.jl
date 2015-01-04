@@ -12,6 +12,7 @@ for op in (:+, :-, :*)
     @eval begin
         ($op)(lhs::Number, rhs::IndepNormal) = ($op)(lhs, RandomAffExpr([rhs],[1.0],0.0))
         ($op)(lhs::Variable, rhs::IndepNormal) = ($op)(convert(AffExpr,lhs),rhs)
+        ($op)(lhs::Variable, rhs::RandomAffExpr) = ($op)(convert(AffExpr,lhs),rhs)
         ($op)(lhs::Variable, rhs::CCAffExpr) = ($op)(convert(AffExpr,lhs),rhs)
     end
     if op == :-
@@ -38,6 +39,8 @@ Base.promote_rule(::Type{AffExpr},::Type{CCAffExpr}) = CCAffExpr
 Base.convert(::Type{CCAffExpr},a::AffExpr) = CCAffExpr(IndepNormal[],AffExpr[],a)
 
 # AffExpr--RandomAffExpr
+(+)(lhs::AffExpr,rhs::RandomAffExpr) = lhs+convert(CCAffExpr,rhs)
+(-)(lhs::AffExpr,rhs::RandomAffExpr) = lhs-convert(CCAffExpr,rhs)
 (*)(lhs::AffExpr,rhs::RandomAffExpr) = CCAffExpr(rhs.vars, [lhs*c for c in rhs.coeffs], lhs*rhs.constant)
 
 # CCAffExpr--CCAffExpr
@@ -53,7 +56,8 @@ Base.convert(::Type{CCAffExpr},a::AffExpr) = CCAffExpr(IndepNormal[],AffExpr[],a
 (+)(lhs::RandomAffExpr, rhs::Variable) = CCAffExpr(lhs.vars,[convert(AffExpr,c) for c in lhs.coeffs],rhs+lhs.constant)
 (-)(lhs::RandomAffExpr, rhs::Variable) = CCAffExpr(lhs.vars,[convert(AffExpr,c) for c in lhs.coeffs],lhs.constant-rhs)
 (*)(lhs::RandomAffExpr, rhs::Variable) = CCAffExpr(lhs.vars,[c*rhs for c in lhs.coeffs],rhs*lhs.constant)
-(*)(lhs::Variable, rhs::RandomAffExpr) = rhs*lhs
 
 # RandomAffExpr--AffExpr
+(+)(lhs::RandomAffExpr,rhs::AffExpr) = rhs+lhs
+(-)(lhs::RandomAffExpr,rhs::AffExpr) = (+)(-rhs,lhs)
 (*)(lhs::RandomAffExpr,rhs::AffExpr) = rhs*lhs
