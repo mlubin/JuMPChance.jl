@@ -8,3 +8,5 @@ One of the first appearances of the convex reformulation discussed in the previo
 The class of distributionally robust chance constraints considered is a special case of so-called robust second-order conic optimization. Tractability is discussed by `Ben-Tal, El Ghaoui, and Nemirovski (2009) <http://www2.isye.gatech.edu/~nemirovs/FullBookDec11.pdf>`_. The particular model was proposed by `Bienstock, Chertkov, and Harnett (2014) <http://dx.doi.org/10.1137/130910312>`_ with application to control of power systems under uncertainty.
 
 JuMPChance is being used in ongoing research projects and reports which are currently in preparation.
+
+See also `JuMPeR <https://github.com/IainNZ/JuMPeR.jl>`_, a JuMP extension for robust optimization.
