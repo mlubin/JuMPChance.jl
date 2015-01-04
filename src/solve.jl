@@ -55,7 +55,6 @@ function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,pro
             nu = quantile(Normal(0,1),1-cc.with_probability)
             nterms = length(ccexpr.vars)
             # add auxiliary variables for variance of each term
-            # TODO: merge terms for duplicate r.v.'s
             @defVar(m, varterm[1:nterms])
             @addConstraint(m, defvar[i=1:nterms], varterm[i] == getStdev(ccexpr.vars[i])*ccexpr.coeffs[i])
             @defVar(m, slackvar >= 0)
