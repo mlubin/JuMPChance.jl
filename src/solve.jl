@@ -1,7 +1,7 @@
 include("distributions.jl")
 import MathProgBase
 
-function solvechance(m::Model;method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false)
+function solvechance(m::Model;method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false, lazy_constraints::Bool=false)
     @assert method == :Reformulate || method == :Cuts
 
     ccdata = getCCData(m)
@@ -74,9 +74,9 @@ function solvechance(m::Model;method=:Refomulate,linearize_objective::Bool=false
     else
         # check that we have pure chance constraints
         if no_uncertains
-            solvecc_cuts(m, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance)
+            solvecc_cuts(m, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance, lazy_constraints)
         else
-            solverobustcc_cuts(m, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance)
+            solverobustcc_cuts(m, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance, lazy_constraints)
         end
     end
 
@@ -91,7 +91,7 @@ function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,pro
 end
 
 
-function solvecc_cuts(m::Model, probability_tolerance::Float64, linearize_objective::Bool, debug::Bool, iteration_limit::Int, objective_linearization_tolerance::Float64)
+function solvecc_cuts(m::Model, probability_tolerance::Float64, linearize_objective::Bool, debug::Bool, iteration_limit::Int, objective_linearization_tolerance::Float64, lazy_constraints::Bool)
 
     ccdata = getCCData(m)
 
@@ -203,10 +203,9 @@ function solvecc_cuts(m::Model, probability_tolerance::Float64, linearize_object
         return nviol, nviol_obj
     end
     
-    (debug && !has_integers) && println("Solving deterministic model")
+    do_lazy = has_integers && lazy_constraints
+    (debug && !do_lazy) && println("Solving deterministic model")
 
-    do_lazy = has_integers
-    #do_lazy = false
     if do_lazy
         setLazyCallback(m, addcuts, fractional=true)
     end
@@ -247,7 +246,7 @@ function solvecc_cuts(m::Model, probability_tolerance::Float64, linearize_object
 
 end
 
-function solverobustcc_cuts(m::Model, probability_tolerance::Float64, linearize_objective::Bool, debug::Bool, iteration_limit::Int, objective_linearization_tolerance::Float64)
+function solverobustcc_cuts(m::Model, probability_tolerance::Float64, linearize_objective::Bool, debug::Bool, iteration_limit::Int, objective_linearization_tolerance::Float64, lazy_constraints::Bool)
 
     ccdata = getCCData(m)
 

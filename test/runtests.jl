@@ -1,6 +1,7 @@
 using JuMPChance, JuMP
 using Base.Test
 using Distributions
+using GLPKMathProgInterface
 
 
 let
@@ -404,4 +405,19 @@ let
     @test status == :Optimal
     # In mathematica: Minimize[{z, z - \[Nu]*Sqrt[1.05*z^2 + 0.01] >= -1}, z]
     @test_approx_eq_eps getValue(z) -0.36431227017642165 1e-5
+end
+
+# integer variables
+let
+    m = ChanceModel(solver=GLPKSolverMIP())
+    @defIndepNormal(m, x, mean=(-1,1),var=(0.95,1.05))
+    @defIndepNormal(m, y, mean=(-0.01,0.01),var=0.01)
+
+    @defVar(m, z >= -100, Int)
+    @setObjective(m, Min, z)
+
+    addConstraint(m, z*x + y <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
+    status = solvechance(m, method=:Cuts)
+    @test status == :Optimal
+    @test_approx_eq_eps getValue(z) 0.0 1e-5
 end
