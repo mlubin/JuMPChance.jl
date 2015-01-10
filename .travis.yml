@@ -7,6 +7,7 @@ julia:
 notifications:
     email: false
 script:
+  - sudo apt-get install libgmp-dev -y
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
   - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.build("JuMPChance"); Pkg.test("JuMPChance"; coverage=true)'
 after_success:
