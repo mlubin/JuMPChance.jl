@@ -40,3 +40,23 @@ macro defIndepNormal(m, x, mean, var)
         end
     end
 end
+
+# Extensions to make JuMP macros work with IndepNormals
+function JuMP.addToExpression(aff::JuMP.GenericAffExpr, c, x)
+    return aff + c*x
+end
+function JuMP.addToExpression(val::Real, c, x::Union(CCAffExpr,RandomAffExpr))
+    return val + c*x
+end
+
+function JuMP._construct_constraint!(faff::CCAffExpr, sense::Symbol)
+    sense in JuMP.valid_senses || error("Unrecognized sense $sense")
+    if sense == :(<=) || sense == :≤
+        return ChanceConstr(faff, :(<=))
+    elseif sense == :(>=) || sense == :≥
+        return ChanceConstr(faff, :(>=))
+    elseif sense == :(==)
+        error("Equality chance constraints not supported")
+    end
+    error("Unrecognized constraint type $sense")
+end
