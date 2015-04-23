@@ -59,7 +59,7 @@ function solvechance(m::Model;method=:Refomulate,linearize_objective::Bool=false
             @addConstraint(m, defvar[i=1:nterms], varterm[i] == getStdev(ccexpr.vars[i])*ccexpr.coeffs[i])
             @defVar(m, slackvar >= 0)
             # conic constraint
-            addConstraint(m, sum([varterm[i]^2 for i in 1:nterms]) <= slackvar^2)
+            @addConstraint(m, sum{ varterm[i]^2, i in 1:nterms } <= slackvar^2)
             if cc.sense == :(>=)
                 @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} + nu*slackvar + ccexpr.constant <= 0)
             else
