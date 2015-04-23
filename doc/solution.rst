@@ -10,23 +10,23 @@ Consider the chance constraint
 
 .. math::
 
-    P\left(\sum_{i=1}^k \left(c_i^Tx +d_i\right)z_i \geq b\right) \leq \epsilon
+    P\left(\sum_{i=1}^k \left(c_i^Tx +d_i\right)z_i \leq b\right) \geq 1-\epsilon
 
 where :math:`z \sim \mathcal{N}(\mu,\Sigma)` is a vector in :math:`\mathbb{R}^n` of jointly normal random
 variables with mean :math:`\mu` and covariance matrix :math:`\Sigma`. JuMPChance currently only supports a diagonal covariance matrix :math:`\Sigma`, i.e., all variables are independent, but we present the more general case here. For simplicity, we can introduce a new set of variables :math:`y_i = c_i^Tx + d_i` and reduce the constraint to:
 
 .. math::
 
-    P\left(y^Tz \geq b\right) \leq \epsilon
+    P\left(y^Tz \leq b\right) \geq 1-\epsilon
 
 Recall that :math:`y^Tz` is normally distributed with mean :math:`y^T\mu` and variance :math:`y^T\Sigma y`. Then
 
 .. math::
 
-    P\left(y^Tz \geq b\right) = P\left(y^Tz - y^T\mu \geq b - y^T\mu\right) = P\left( \frac{y^Tz - \mu^Tz}{\sqrt{y^T\Sigma y}} \geq \frac{b - y^T\mu}{\sqrt{y^T\Sigma y}}\right)
+    P\left(y^Tz \leq b\right) = P\left(y^Tz - y^T\mu \leq b - y^T\mu\right) = P\left( \frac{y^Tz - \mu^Tz}{\sqrt{y^T\Sigma y}} \leq \frac{b - y^T\mu}{\sqrt{y^T\Sigma y}}\right)
     
     
-    = 1- \Phi\left(\frac{b - y^T\mu}{\sqrt{y^T\Sigma y}}\right)
+    = \Phi\left(\frac{b - y^T\mu}{\sqrt{y^T\Sigma y}}\right)
 
 where :math:`\Phi` is the standard normal cumulative distribution function.
 
@@ -75,7 +75,7 @@ The ``solve`` method has the following optional keyword parameters when invoked 
 
     - ``method::Symbol``, either ``:Reformulate`` to use the second-order conic formulation or ``:Cuts`` to approximate the constraints by a sequence of linear outer-approximations. Defaults to ``:Reformulate``.
     - ``linearize_objective::Bool``, either ``true`` or ``false`` indicating whether to provide a convex quadratic objective directly to the solver or to use linear outer approximations. Defaults to ``false``.
-    - ``probability_tolerance::Float64``, chance constraints are considered satisfied if within :math:`\epsilon` plus the given tolerance. Defaults to ``0.001``.
+    - ``probability_tolerance::Float64``, chance constraints are considered satisfied if they actually hold with probability :math:`1-\epsilon` minus the given tolerance. Defaults to ``0.001``.
     - ``debug::Bool``, enables debugging output for the outer approximation algorithm. Defaults to ``false``.
     - ``iteration_limit::Int``, limits the number of iterations performed by the outer approximation algorithm. (In each iteration, a single linearization is added for each violated constraint.) Defaults to ``60``.
     - ``objective_linearization_tolerance::Float64``, absolute term-wise tolerance used when linearizing quadratic objectives. Defaults to ``1e-6``.

@@ -54,7 +54,7 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
 
         for cc in chanceconstr
             ccexpr = cc.ccexpr
-            nu = quantile(Normal(0,1),1-cc.with_probability)
+            nu = quantile(Normal(0,1),cc.with_probability)
             nterms = length(ccexpr.vars)
             # add auxiliary variables for variance of each term
             @defVar(m, varterm[1:nterms])
@@ -62,10 +62,10 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
             @defVar(m, slackvar >= 0)
             # conic constraint
             @addConstraint(m, sum{ varterm[i]^2, i in 1:nterms } <= slackvar^2)
-            if cc.sense == :(>=)
+            if cc.sense == :(<=)
                 @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} + nu*slackvar + ccexpr.constant <= 0)
             else
-                @assert cc.sense == :(<=)
+                @assert cc.sense == :(>=)
                 @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} - nu*slackvar + ccexpr.constant >= 0)
             end
         end
@@ -100,8 +100,8 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
         cc = ccdata.chanceconstr[i]
         ccexpr = cc.ccexpr
         nterms = length(ccexpr.vars)
-        nu = quantile(Normal(0,1),1-cc.with_probability)
-        if cc.sense == :(>=)
+        nu = quantile(Normal(0,1),cc.with_probability)
+        if cc.sense == :(<=)
             @addConstraint(m, sum{getMean(ccexpr.vars[k])*ccexpr.coeffs[k], k=1:nterms} + nu*slackvar[i] + ccexpr.constant <= 0)
         else
             @addConstraint(m, sum{getMean(ccexpr.vars[k])*ccexpr.coeffs[k], k=1:nterms} - nu*slackvar[i] + ccexpr.constant >= 0)
@@ -160,7 +160,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
                     satisfied_prob = 1-cdf(Normal(mean,sqrt(var)),0.0)
                 end
             end
-            if satisfied_prob <= cc.with_probability + probability_tolerance # feasibility tolerance
+            if satisfied_prob >= cc.with_probability - probability_tolerance # feasibility tolerance
                 # constraint is okay!
                 continue
             else
@@ -325,7 +325,7 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
             cc::ChanceConstr = ccdata.chanceconstr[i]
             ccexpr = cc.ccexpr
             nterms = length(ccexpr.vars)
-            nu = quantile(Normal(0,1),1-cc.with_probability)
+            nu = quantile(Normal(0,1),cc.with_probability)
             # sort to determine worst case
             meanvals = zeros(nterms)
             varvals = zeros(nterms)
@@ -336,11 +336,11 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
                 exprval = getValue(ccexpr.coeffs[k])
                 #debug && println(ccexpr.coeffs[k], " => ", exprval)
                 idx = ccexpr.vars[k].idx
-                if cc.sense == :(<=) && exprval < 0.0
+                if cc.sense == :(>=) && exprval < 0.0
                     deviation_sign[k] = 1.0
-                elseif cc.sense == :(<=) && exprval >= 0.0
+                elseif cc.sense == :(>=) && exprval >= 0.0
                     deviation_sign[k] = -1.0
-                elseif cc.sense == :(>=) && exprval < 0.0
+                elseif cc.sense == :(<=) && exprval < 0.0
                     deviation_sign[k] = -1.0
                 else
                     deviation_sign[k] = 1.0
@@ -354,7 +354,7 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
             sorted_var_idx = sortperm(varvals,rev=true)
             @assert cc.uncertainty_budget_mean >= 0
             @assert cc.uncertainty_budget_variance >= 0
-            if cc.sense == :(<=)
+            if cc.sense == :(>=)
                 worst_mean = nominal_mean - sum(meanvals[sorted_mean_idx[1:cc.uncertainty_budget_mean]])
             else
                 worst_mean = nominal_mean + sum(meanvals[sorted_mean_idx[1:cc.uncertainty_budget_mean]])
@@ -373,11 +373,11 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
                     satisfied_prob = 1-cdf(Normal(worst_mean,sqrt(worst_var)),0.0)
                 end
             end
-            if satisfied_prob <= cc.with_probability
+            if satisfied_prob >= cc.with_probability
                 # constraint is okay!
                 continue
             else
-                if satisfied_prob >= cc.with_probability + probability_tolerance
+                if satisfied_prob <= cc.with_probability - probability_tolerance
                     debug && println(cc)
                     debug && println("nominal_mean = $nominal_mean")
                     debug && println("nominal_var = $nominal_var")
@@ -390,7 +390,7 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
                     debug && println("Extreme indices (var) ", sorted_var_idx[1:cc.uncertainty_budget_variance])
                     debug && println(ccexpr.constant, " ===> ", getValue(ccexpr.constant))
                     debug && println(ccexpr.coeffs[1], " ===> ", getValue(ccexpr.coeffs[1]))
-                    debug && println("VIOL ", 100*(satisfied_prob - cc.with_probability), "%")
+                    debug && println("VIOL ", 100*(cc.with_probability - satisfied_prob), "%")
                     nviol += 1
                     var_coeffs = [vars_nominal[ccexpr.vars[k].idx] for k in 1:nterms]
                     for k in 1:cc.uncertainty_budget_variance
@@ -401,7 +401,7 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
 
                     # add a linearization
                     # f(x') + f'(x')(x-x') <= 0
-                    if cc.sense == :(>=)
+                    if cc.sense == :(<=)
                         @addConstraint(m, ccexpr.constant + nu*sqrt(worst_var) + 
                             sum{means_nominal[ccexpr.vars[k].idx]*(ccexpr.coeffs[k]), k=1:nterms} +
                             sum{sign(getValue(ccexpr.coeffs[sorted_mean_idx[r]]))*means_deviation[ccexpr.vars[sorted_mean_idx[r]].idx]*(ccexpr.coeffs[sorted_mean_idx[r]]), r=1:cc.uncertainty_budget_mean} +

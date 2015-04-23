@@ -146,7 +146,9 @@ let
     c = (3v+1)*x + 10 <= 20
     @test conToStr(c) == "(3 v + 1)*x + -10 <= 0"
     addConstraint(m, c, with_probability=0.05)
-    @test conToStr(JuMPChance.getCCData(m).chanceconstr[1]) == "(3 v + 1)*x + -10 <= 0, with probability 0.05"
+    @test conToStr(JuMPChance.getCCData(m).chanceconstr[1]) == "(3 v + 1)*x + -10 >= 0, with probability 0.95"
+    @addConstraint(m, (3v+1)*x + 10 <= 20, with_probability=0.95)
+    @test conToStr(JuMPChance.getCCData(m).chanceconstr[end]) == "(3 v + 1)*x + -10 <= 0, with probability 0.95"
     @test_throws ErrorException addConstraint(m, c, with_probability=10.0)
     c = (3v+1)*x + 10 >= 20
     @test conToStr(c) == "(3 v + 1)*x + -10 >= 0"
@@ -181,7 +183,7 @@ let
         @defVar(m, z >= -100) # so original problem is bounded
 
         @setObjective(m, Min, z)
-        @addConstraint(m, z*x <= -1, with_probability=0.05)
+        @addConstraint(m, z*x >= -1, with_probability=0.95)
 
         status = solve(m, method=method)
         @test status == :Optimal
@@ -196,7 +198,7 @@ let
         @defVar(m, z >= -100) # so original problem is bounded
 
         @setObjective(m, Min, z)
-        @addConstraint(m, -z*x >= 1, with_probability=0.05)
+        @addConstraint(m, -z*x <= 1, with_probability=0.95)
 
         status = solve(m, method=method)
         @test status == :Optimal
@@ -212,7 +214,7 @@ let
         @defVar(m, z >= -100) # so original problem is bounded
 
         @setObjective(m, Min, z)
-        @addConstraint(m, z*(x-1) <= -1, with_probability=0.05)
+        @addConstraint(m, z*(x-1) >= -1, with_probability=0.95)
 
         status = solve(m, method=method)
         @test status == :Optimal
@@ -226,7 +228,7 @@ let
         @defVar(m, z >= -100) # so original problem is bounded
 
         @setObjective(m, Min, z)
-        @addConstraint(m, z*(x/2-1) <= -1, with_probability=0.05)
+        @addConstraint(m, z*(x/2-1) >= -1, with_probability=0.95)
 
         status = solve(m, method=method)
         @test status == :Optimal
@@ -242,7 +244,7 @@ let
         @defVar(m, z >= -100) # so original problem is bounded
 
         @setObjective(m, Min, z)
-        @addConstraint(m, (1/2)z*x + (1/2)z*x <= -1, with_probability=0.05)
+        @addConstraint(m, (1/2)z*x + (1/2)z*x >= -1, with_probability=0.95)
 
         status = solve(m, method=method)
         @test status == :Optimal
@@ -258,7 +260,7 @@ let
     @defVar(m, z >= -100)
     @setObjective(m, Min, z)
 
-    @addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
+    @addConstraint(m, z*x >= -1, with_probability=0.95, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
     status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
@@ -270,7 +272,7 @@ let
     @defVar(m, z >= -100)
     @setObjective(m, Min, z)
 
-    @addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
+    @addConstraint(m, z*x >= -1, with_probability=0.95, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
     status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
@@ -284,7 +286,7 @@ let
     @defVar(m, z >= -100)
     @setObjective(m, Min, z)
 
-    @addConstraint(m, -z*x >= 1, with_probability=0.05, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
+    @addConstraint(m, -z*x <= 1, with_probability=0.95, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
     status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
@@ -300,7 +302,7 @@ let
         @defVar(m, z >= -100)
         @setObjective(m, Min, z+2z^2)
 
-        @addConstraint(m, z*x <= -1, with_probability=0.05)
+        @addConstraint(m, z*x >= -1, with_probability=0.95)
         status = solve(m, method=method, linearize_objective=linearize)
         @test status == :Optimal
         @test_approx_eq_eps getValue(z) -1/4 1e-4
@@ -314,7 +316,7 @@ let
         @defVar(m, z >= -100)
         @setObjective(m, Min, z+2z^2)
 
-        @addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
+        @addConstraint(m, z*x >= -1, with_probability=0.95, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
         status = solve(m, method=:Cuts, linearize_objective=linearize)
         @test status == :Optimal
         @test_approx_eq_eps getValue(z) -1/4 1e-4
@@ -329,7 +331,7 @@ let
     @defVar(m, z >= -100)
     @setObjective(m, Min, z)
 
-    @addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=0)
+    @addConstraint(m, z*x >= -1, with_probability=0.95, uncertainty_budget_mean=1, uncertainty_budget_variance=0)
     status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/(1+quantile(Normal(0,1),0.95)) 1e-6
@@ -343,7 +345,7 @@ let
     @defVar(m, z >= -100)
     @setObjective(m, Min, z)
 
-    @addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=0)
+    @addConstraint(m, z*x >= -1, with_probability=0.95, uncertainty_budget_mean=1, uncertainty_budget_variance=0)
     status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/(1+quantile(Normal(0,1),0.95)) 1e-6
@@ -357,7 +359,7 @@ let
     @defVar(m, z >= -100)
     @setObjective(m, Min, z)
 
-    @addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
+    @addConstraint(m, z*x >= -1, with_probability=0.95, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
     status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/(1+sqrt(1.05)*quantile(Normal(0,1),0.95)) 1e-6
@@ -371,7 +373,7 @@ let
     @defVar(m, z >= -100)
     @setObjective(m, Min, z)
 
-    @addConstraint(m, z*(x-1) <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
+    @addConstraint(m, z*(x-1) >= -1, with_probability=0.95, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
     status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/(1+sqrt(1.05)*quantile(Normal(0,1),0.95)) 1e-6
@@ -385,7 +387,7 @@ let
     @defVar(m, z >= -100)
     @setObjective(m, Min, z)
 
-    @addConstraint(m, (z/2)*(x-1) <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
+    @addConstraint(m, (z/2)*(x-1) >= -1, with_probability=0.95, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
     status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -2/(1+sqrt(1.05)*quantile(Normal(0,1),0.95)) 1e-6
@@ -400,7 +402,7 @@ let
     @defVar(m, z >= -100)
     @setObjective(m, Min, z)
 
-    @addConstraint(m, z*x + y <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
+    @addConstraint(m, z*x + y >= -1, with_probability=0.95, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
     status = solve(m, method=:Cuts)
     @test status == :Optimal
     # In mathematica: Minimize[{z, z - \[Nu]*Sqrt[1.05*z^2 + 0.01] >= -1}, z]
@@ -416,7 +418,7 @@ let
     @defVar(m, z >= -100, Int)
     @setObjective(m, Min, z)
 
-    @addConstraint(m, z*x + sum{y,i=1:1} <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
+    @addConstraint(m, z*x + sum{y,i=1:1} >= -1, with_probability=0.95, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
     status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) 0.0 1e-5
