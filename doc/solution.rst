@@ -68,10 +68,10 @@ chance constraint can be formulated as
 
 This is a convex constraint because it is the intersection of a large (possibly infinite) set of convex constraints. These are challenging to reformulate into an explicit conic form. Instead, we approximate the constraint by a sequence of linear tangents, i.e., given a point :math:`y`, we detect if the constraint is violated for any choice of :math:`\mu` or :math:`\Sigma`, and if so we add a separating hyperplane which is simple to compute.
 
-solvechance parameters
-^^^^^^^^^^^^^^^^^^^^^^
+solve parameters
+^^^^^^^^^^^^^^^^
 
-The ``solvechance`` method has the following optional keyword parameters:
+The ``solve`` method has the following optional keyword parameters when invoked on a JuMPChance model:
 
     - ``method::Symbol``, either ``:Reformulate`` to use the second-order conic formulation or ``:Cuts`` to approximate the constraints by a sequence of linear outer-approximations. Defaults to ``:Reformulate``.
     - ``linearize_objective::Bool``, either ``true`` or ``false`` indicating whether to provide a convex quadratic objective directly to the solver or to use linear outer approximations. Defaults to ``false``.

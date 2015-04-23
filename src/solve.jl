@@ -1,7 +1,9 @@
 include("distributions.jl")
 import MathProgBase
 
-function solvechance(m::Model;method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false, lazy_constraints::Bool=false)
+@Base.deprecate solvechance(m; kwargs...) JuMP.solve(m; kwargs...)
+
+function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false, lazy_constraints::Bool=false)
     @assert method == :Reformulate || method == :Cuts
 
     ccdata = getCCData(m)
@@ -69,14 +71,14 @@ function solvechance(m::Model;method=:Refomulate,linearize_objective::Bool=false
         end
         #println(m)
 
-        return solve(m)
+        return solve(m,suppress_warnings=suppress_warnings, ignore_solve_hook=true)
 
     else
         # check that we have pure chance constraints
         if no_uncertains
-            solvecc_cuts(m, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance, lazy_constraints)
+            solvecc_cuts(m, suppress_warnings, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance, lazy_constraints)
         else
-            solverobustcc_cuts(m, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance, lazy_constraints)
+            solverobustcc_cuts(m, suppress_warnings, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance, lazy_constraints)
         end
     end
 
@@ -84,14 +86,7 @@ function solvechance(m::Model;method=:Refomulate,linearize_objective::Bool=false
 
 end
 
-function solvecc(m::Model;method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false)
-
-    Base.warn_once("solvecc is deprecated. Use solvechance instead!")
-    return solvechance(m, method=method, linearize_objective=linearize_objective, probability_tolerance=probability_tolerance, iteration_limit=iteration_limit, objective_linearization_tolerance=objective_linearization_tolerance, reformulate_quadobj_to_conic=reformulate_quadobj_to_conic)
-end
-
-
-function solvecc_cuts(m::Model, probability_tolerance::Float64, linearize_objective::Bool, debug::Bool, iteration_limit::Int, objective_linearization_tolerance::Float64, lazy_constraints::Bool)
+function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::Float64, linearize_objective::Bool, debug::Bool, iteration_limit::Int, objective_linearization_tolerance::Float64, lazy_constraints::Bool)
 
     ccdata = getCCData(m)
 
@@ -210,7 +205,7 @@ function solvecc_cuts(m::Model, probability_tolerance::Float64, linearize_object
         setLazyCallback(m, addcuts, fractional=true)
     end
     #tic()
-    status = solve(m)
+    status = solve(m, suppress_warnings=suppress_warnings, ignore_solve_hook=true)
 
     if do_lazy
         #toc()
@@ -234,7 +229,7 @@ function solvecc_cuts(m::Model, probability_tolerance::Float64, linearize_object
         else
             println("Iteration $niter: $nviol constraint violations, $nviol_obj objective linearization violations")
         end
-        status = solve(m)
+        status = solve(m, suppress_warnings=suppress_warnings, ignore_solve_hook=true)
         if status != :Optimal
             return status
         end
@@ -246,7 +241,7 @@ function solvecc_cuts(m::Model, probability_tolerance::Float64, linearize_object
 
 end
 
-function solverobustcc_cuts(m::Model, probability_tolerance::Float64, linearize_objective::Bool, debug::Bool, iteration_limit::Int, objective_linearization_tolerance::Float64, lazy_constraints::Bool)
+function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::Float64, linearize_objective::Bool, debug::Bool, iteration_limit::Int, objective_linearization_tolerance::Float64, lazy_constraints::Bool)
 
     ccdata = getCCData(m)
 
@@ -315,7 +310,7 @@ function solverobustcc_cuts(m::Model, probability_tolerance::Float64, linearize_
     
     debug && println("Solving deterministic model")
 
-    status = solve(m)
+    status = solve(m, suppress_warnings=suppress_warnings, ignore_solve_hook=true)
     
     if status != :Optimal
         return status
@@ -444,7 +439,7 @@ function solverobustcc_cuts(m::Model, probability_tolerance::Float64, linearize_
         else
             println("Iteration $niter: $nviol constraint violations, $nviol_obj objective linearization violations")
         end
-        status = solve(m)
+        status = solve(m, suppress_warnings=suppress_warnings, ignore_solve_hook=true)
         if status != :Optimal
             return status
         end

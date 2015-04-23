@@ -134,19 +134,19 @@ Solving the model
 
 After the model `m` has been created and all constraints added, calling::
 
-    solvechance(m,method=:Cuts)
+    solve(m,method=:Cuts)
 
 or::
 
-    solvechance(m,method=:Reformulate)
+    solve(m,method=:Reformulate)
 
 will tell JuMPChance to solve the model. The available solution methods are described
 in the following section.
 
-The ``solvechance`` function also returns a solution status. This should be checked
+The ``solve`` function also returns a solution status. This should be checked
 to confirm that the model was successfully solved to optimality, for example::
 
-    status = solvechance(m)
+    status = solve(m)
     if status == :Optimal
         println("Solved to optimality")
     else

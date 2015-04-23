@@ -183,7 +183,7 @@ let
         @setObjective(m, Min, z)
         addConstraint(m, z*x <= -1, with_probability=0.05)
 
-        status = solvechance(m, method=method)
+        status = solve(m, method=method)
         @test status == :Optimal
         @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
     end
@@ -198,7 +198,7 @@ let
         @setObjective(m, Min, z)
         addConstraint(m, -z*x >= 1, with_probability=0.05)
 
-        status = solvechance(m, method=method)
+        status = solve(m, method=method)
         @test status == :Optimal
         @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
     end
@@ -214,7 +214,7 @@ let
         @setObjective(m, Min, z)
         addConstraint(m, z*(x-1) <= -1, with_probability=0.05)
 
-        status = solvechance(m, method=method)
+        status = solve(m, method=method)
         @test status == :Optimal
         @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
     end
@@ -228,7 +228,7 @@ let
         @setObjective(m, Min, z)
         addConstraint(m, z*(x/2-1) <= -1, with_probability=0.05)
 
-        status = solvechance(m, method=method)
+        status = solve(m, method=method)
         @test status == :Optimal
         @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
     end
@@ -244,7 +244,7 @@ let
         @setObjective(m, Min, z)
         addConstraint(m, (1/2)z*x + (1/2)z*x <= -1, with_probability=0.05)
 
-        status = solvechance(m, method=method)
+        status = solve(m, method=method)
         @test status == :Optimal
         @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
     end
@@ -259,7 +259,7 @@ let
     @setObjective(m, Min, z)
 
     addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
-    status = solvechance(m, method=:Cuts)
+    status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
 end
@@ -271,7 +271,7 @@ let
     @setObjective(m, Min, z)
 
     addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
-    status = solvechance(m, method=:Cuts)
+    status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
 end
@@ -285,7 +285,7 @@ let
     @setObjective(m, Min, z)
 
     addConstraint(m, -z*x >= 1, with_probability=0.05, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
-    status = solvechance(m, method=:Cuts)
+    status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
 end
@@ -301,7 +301,7 @@ let
         @setObjective(m, Min, z+2z^2)
 
         addConstraint(m, z*x <= -1, with_probability=0.05)
-        status = solvechance(m, method=method, linearize_objective=linearize)
+        status = solve(m, method=method, linearize_objective=linearize)
         @test status == :Optimal
         @test_approx_eq_eps getValue(z) -1/4 1e-4
     end
@@ -315,7 +315,7 @@ let
         @setObjective(m, Min, z+2z^2)
 
         addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=0, uncertainty_budget_variance=0)
-        status = solvechance(m, method=:Cuts, linearize_objective=linearize)
+        status = solve(m, method=:Cuts, linearize_objective=linearize)
         @test status == :Optimal
         @test_approx_eq_eps getValue(z) -1/4 1e-4
     end
@@ -330,7 +330,7 @@ let
     @setObjective(m, Min, z)
 
     addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=0)
-    status = solvechance(m, method=:Cuts)
+    status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/(1+quantile(Normal(0,1),0.95)) 1e-6
 end
@@ -344,7 +344,7 @@ let
     @setObjective(m, Min, z)
 
     addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=0)
-    status = solvechance(m, method=:Cuts)
+    status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/(1+quantile(Normal(0,1),0.95)) 1e-6
 end
@@ -358,7 +358,7 @@ let
     @setObjective(m, Min, z)
 
     addConstraint(m, z*x <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
-    status = solvechance(m, method=:Cuts)
+    status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/(1+sqrt(1.05)*quantile(Normal(0,1),0.95)) 1e-6
 end
@@ -372,7 +372,7 @@ let
     @setObjective(m, Min, z)
 
     addConstraint(m, z*(x-1) <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
-    status = solvechance(m, method=:Cuts)
+    status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/(1+sqrt(1.05)*quantile(Normal(0,1),0.95)) 1e-6
 end
@@ -386,7 +386,7 @@ let
     @setObjective(m, Min, z)
 
     addConstraint(m, (z/2)*(x-1) <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
-    status = solvechance(m, method=:Cuts)
+    status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -2/(1+sqrt(1.05)*quantile(Normal(0,1),0.95)) 1e-6
 end
@@ -401,7 +401,7 @@ let
     @setObjective(m, Min, z)
 
     addConstraint(m, z*x + y <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
-    status = solvechance(m, method=:Cuts)
+    status = solve(m, method=:Cuts)
     @test status == :Optimal
     # In mathematica: Minimize[{z, z - \[Nu]*Sqrt[1.05*z^2 + 0.01] >= -1}, z]
     @test_approx_eq_eps getValue(z) -0.36431227017642165 1e-5
@@ -417,7 +417,7 @@ let
     @setObjective(m, Min, z)
 
     addConstraint(m, z*x + y <= -1, with_probability=0.05, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
-    status = solvechance(m, method=:Cuts)
+    status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) 0.0 1e-5
 end
