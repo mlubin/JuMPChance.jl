@@ -1,6 +1,11 @@
 JuMPChance release notes
 ========================
 
+Unreleased
+----------
+
+  * ``solvechance`` method renamed to ``solve``
+
 Version 0.1.1 (January 10, 2015)
 --------------------------------
 
