@@ -90,7 +90,7 @@ Chance constraints of the above form are added by using the ``@addConstraint`` m
 
     @addConstraint(m, z*x >= -1, with_probability=0.95)
 
-Adds the constraint :math:`P(z*x \geq -1) > 0.05`. Note that the ``with_probability`` argument specifies the *minimum* probability :math:`\epsilon` with which the constraint may be satisfied, and so should be a number close to 1.
+Adds the constraint :math:`P(z*x \geq -1) \geq 0.95`. Note that the ``with_probability`` argument specifies the *minimum* probability :math:`\epsilon` with which the constraint may be satisfied, and so should be a number close to 1.
 
 
 Distributionally robust chance constraints
