@@ -1,7 +1,7 @@
 include("distributions.jl")
 import MathProgBase
 
-@Base.deprecate solvechance(m; kwargs...) JuMP.solve(m; kwargs...)
+@Base.deprecate solvechance(m; kwargs...) solve(m; kwargs...)
 
 function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false, lazy_constraints::Bool=false)
     @assert method == :Reformulate || method == :Cuts
