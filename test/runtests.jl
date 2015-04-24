@@ -177,6 +177,23 @@ let
 end
 
 let
+    m = ChanceModel()
+    @defVar(m, x)
+    @defIndepNormal(m, ξ, mean = 0, var = 1)
+    cc = JuMPChance.getCCData(m)
+
+    @addConstraint(m, -1 ≤ x*ξ ≤ 1, with_probability = 0.95)
+    @test conToStr(cc.twosidechanceconstr[end]) == "-1 <= (x)*ξ + 0 <= 1, with probability 0.95"
+    @addConstraint(m, -1 ≤ x*ξ ≤ x, with_probability = 0.95)
+    @test conToStr(cc.twosidechanceconstr[end]) == "-1 <= (x)*ξ + 0 <= x, with probability 0.95"
+    if VERSION > v"0.4-"
+        @defVar(m,y[1:3])
+        @addConstraint(m, -1 ≤ x*ξ ≤ sum{y[i],i=1:3}, with_probability = 0.95)
+        @test conToStr(cc.twosidechanceconstr[end]) == "-1 <= (x)*ξ + 0 <= y[1] + y[2] + y[3], with probability 0.95"
+    end
+end
+
+let
     for method in [:Reformulate,:Cuts]
         m = ChanceModel()
         @defIndepNormal(m, x, mean=0, var=1)

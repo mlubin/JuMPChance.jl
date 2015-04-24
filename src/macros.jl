@@ -60,3 +60,6 @@ function JuMP._construct_constraint!(faff::CCAffExpr, sense::Symbol)
     end
     error("Unrecognized constraint type $sense")
 end
+
+JuMP._construct_constraint!(faff::CCAffExpr, lb::AffExpr, ub::AffExpr) = TwoSideChanceConstr(faff, lb, ub)
+JuMP._construct_constraint!(faff::CCAffExpr, lb, ub) = TwoSideChanceConstr(faff, convert(AffExpr,lb), convert(AffExpr,ub))

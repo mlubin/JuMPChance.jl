@@ -19,7 +19,8 @@ type CCData
     chanceconstr
     # robust chance constraints
     #robustchanceconstr
-    
+    # two-sided chance constraints
+    twosidechanceconstr
     numRVs::Int # number of independent normal r.v.'s
     RVmeans
     RVvars
@@ -29,7 +30,7 @@ end
 function ChanceModel(;solver=ECOS.ECOSSolver())
     m = Model(solver=solver)
     m.solvehook = solvehook
-    m.ext[:ChanceConstr] = CCData(Any[],0,Any[],Any[],String[])
+    m.ext[:ChanceConstr] = CCData(ChanceConstr[],TwoSideChanceConstr[],0,Any[],Any[],String[])
     return m
 end
 
@@ -170,6 +171,38 @@ end
 
 Base.print(io::IO, a::ChanceConstr) = print(io, JuMP.conToStr(a))
 Base.show( io::IO, a::ChanceConstr) = print(io, JuMP.conToStr(a))
+
+type TwoSideChanceConstr
+    ccexpr::CCAffExpr
+    lb::AffExpr
+    ub::AffExpr
+    with_probability::Float64 # with this probability *or greater*
+end
+
+TwoSideChanceConstr(ccexpr::CCAffExpr,lb::AffExpr,ub::AffExpr) = TwoSideChanceConstr(ccexpr, lb, ub, NaN)
+
+function JuMP.addConstraint(m::Model, constr::TwoSideChanceConstr; with_probability::Float64=NaN)
+    if !(0.5 < with_probability < 1)
+        error("Must specify with_probability between 1/2 and 1")
+    end
+    constr.with_probability = with_probability
+
+    ccdata = getCCData(m)
+    push!(ccdata.twosidechanceconstr, constr)
+
+end
+
+function JuMP.conToStr(c::TwoSideChanceConstr)
+    s = "$(affToStr(c.lb)) <= $(affToStr(c.ccexpr)) <= $(affToStr(c.ub))"
+    if isnan(c.with_probability)
+        return s
+    else
+        return s*", with probability $(c.with_probability)"
+    end
+end
+
+Base.print(io::IO, a::TwoSideChanceConstr) = print(io, JuMP.conToStr(a))
+Base.show( io::IO, a::TwoSideChanceConstr) = print(io, JuMP.conToStr(a))
 
 include("operators.jl")
 include("macros.jl")
