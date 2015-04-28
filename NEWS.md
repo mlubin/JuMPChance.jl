@@ -6,6 +6,8 @@ Unreleased
 
   * ``solvechance`` method renamed to ``solve``
   * The meaning of ``with_probability`` **has changed**. Constraints must now hold with the given probability or greater, which is tractable for 1/2 or greater. A deprecation warning is in place when a small value is provided.
+  * The ``@addConstraint`` macro now accepts chance constraints.
+  * Following JuMP, the use of operators <= and >= *outside of macros* has been deprecated. Use ``@addConstraint`` instead of ``addConstraint``.
 
 Version 0.1.1 (January 10, 2015)
 --------------------------------

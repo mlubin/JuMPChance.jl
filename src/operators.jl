@@ -47,8 +47,15 @@ Base.convert(::Type{CCAffExpr},a::AffExpr) = CCAffExpr(IndepNormal[],AffExpr[],a
 # handled by GenericAffExpr fallback
 
 # comparison operators
-(<=)(lhs::CCAffExpr, rhs::Number) = ChanceConstr(lhs-rhs, :(<=))
-(>=)(lhs::CCAffExpr, rhs::Number) = ChanceConstr(lhs-rhs, :(>=))
+function (<=)(lhs::CCAffExpr, rhs::Number)
+    Base.warn_once("The comparison operator <= has been deprecated for constructing chance constraints. Use the form @addConstraint instead.")
+    ChanceConstr(lhs-rhs, :(<=))
+end
+
+function (>=)(lhs::CCAffExpr, rhs::Number)
+    Base.warn_once("The comparison operator >= has been deprecated for constructing chance constraints. Use the form @addConstraint instead.")
+    ChanceConstr(lhs-rhs, :(>=))
+end
 # == not valid
 
 # RandomAffExpr
