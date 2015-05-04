@@ -8,6 +8,7 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
 
     ccdata = getCCData(m)
     no_uncertains = all([isa(x,Real) for x in ccdata.RVmeans]) && all([isa(x,Real) for x in ccdata.RVvars])
+    has_twoside = length(ccdata.twosidechanceconstr) > 0
     probability_tolerance > 0 || error("Invalid probability tolerance $probability_tolerance")
 
     # merge possible duplicate terms in constraints
@@ -74,6 +75,7 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
         return solve(m,suppress_warnings=suppress_warnings, ignore_solve_hook=true)
 
     else
+        has_twoside && error("Two-sided chance constraints are not currently supported with method = :Cuts.")
         # check that we have pure chance constraints
         if no_uncertains
             solvecc_cuts(m, suppress_warnings, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance, lazy_constraints)
