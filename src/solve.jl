@@ -150,10 +150,10 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
             end
             mean += getValue(ccexpr.constant)
             if var < 1e-10 # corner case, need to handle carefully
-                if cc.sense == :(<=) # actually this means strict inequality
-                    satisfied_prob = (mean >= -1e-7) ? 0.0 : 1.0
+                if cc.sense == :(<=)
+                    satisfied_prob = (mean <= 1e-7) ? 1.0 : 0.0
                 else
-                    satisfied_prob = (mean <= 1e-7) ? 0.0 : 1.0
+                    satisfied_prob = (mean >= -1e-7) ? 1.0 : 0.0
                 end
             else
                 if cc.sense == :(<=)
@@ -363,10 +363,10 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
             end
             worst_var = nominal_var + sum(varvals[sorted_var_idx[1:cc.uncertainty_budget_variance]])
             if worst_var < 1e-10 # corner case, need to handle carefully
-                if cc.sense == :(<=) # actually this means strict inequality
-                    satisfied_prob = (worst_mean >= -1e-7) ? 0.0 : 1.0
+                if cc.sense == :(<=) # var = 0
+                    satisfied_prob = (worst_mean <= 1e-7) ? 1.0 : 0.0
                 else
-                    satisfied_prob = (worst_mean <= 1e-7) ? 0.0 : 1.0
+                    satisfied_prob = (worst_mean >= -1e-7) ? 1.0 : 0.0
                 end
             else
                 if cc.sense == :(<=)

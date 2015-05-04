@@ -455,3 +455,64 @@ let
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) 0.0 1e-5
 end
+
+# variance == 0 corner case
+let
+    for method in [:Reformulate,:Cuts]
+        m = ChanceModel()
+        @defIndepNormal(m, x, mean=0, var=1)
+        @defVar(m, z <= 100) # so original problem is bounded
+        @defVar(m, y == 0)
+
+        @setObjective(m, Max, z)
+        @addConstraint(m, z + x*y <= 20, with_probability=0.95)
+
+        status = solve(m, method=method)
+        @test status == :Optimal
+        @test_approx_eq_eps getValue(z) 20 1e-6
+    end
+end
+
+let
+    for method in [:Reformulate,:Cuts]
+        m = ChanceModel()
+        @defIndepNormal(m, x, mean=0, var=1)
+        @defVar(m, z <= 100)
+        @defVar(m, y == 0)
+
+        @setObjective(m, Max, z)
+        @addConstraint(m, -z - x*y >= -20, with_probability=0.95)
+
+        status = solve(m, method=method)
+        @test status == :Optimal
+        @test_approx_eq_eps getValue(z) 20 1e-6
+    end
+end
+
+let
+    m = ChanceModel()
+    @defIndepNormal(m, x, mean=0, var=1)
+    @defVar(m, z <= 100)
+    @defVar(m, y == 0)
+
+    @setObjective(m, Max, z)
+    @addConstraint(m, -z - x*y >= -20, with_probability=0.95, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
+
+    status = solve(m, method=:Cuts)
+    @test status == :Optimal
+    @test_approx_eq_eps getValue(z) 20 1e-6
+end
+
+let
+    m = ChanceModel()
+    @defIndepNormal(m, x, mean=0, var=1)
+    @defVar(m, z <= 100)
+    @defVar(m, y == 0)
+
+    @setObjective(m, Max, z)
+    @addConstraint(m, z + x*y <= 20, with_probability=0.95, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
+
+    status = solve(m, method=:Cuts)
+    @test status == :Optimal
+    @test_approx_eq_eps getValue(z) 20 1e-6
+end

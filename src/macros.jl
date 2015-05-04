@@ -42,6 +42,9 @@ macro defIndepNormal(m, x, mean, var)
 end
 
 # Extensions to make JuMP macros work with IndepNormals
+
+(*)(x::IndepNormal) = x
+
 function JuMP.addToExpression(aff::JuMP.GenericAffExpr, c, x)
     return aff + c*x
 end
