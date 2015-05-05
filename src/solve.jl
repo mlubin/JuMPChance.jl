@@ -107,7 +107,7 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
         return solve(m,suppress_warnings=suppress_warnings, ignore_solve_hook=true)
 
     else
-        has_twoside && error("Two-sided chance constraints are not currently supported with method = :Cuts.")
+        has_twoside && error("Two-sided chance constraints are not currently supported with method = :Cuts. Use method = :Reformuate instead.")
         # check that we have pure chance constraints
         if no_uncertains
             solvecc_cuts(m, suppress_warnings, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance, lazy_constraints)
