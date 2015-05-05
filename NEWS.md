@@ -1,9 +1,10 @@
 JuMPChance release notes
 ========================
 
-Unreleased
-----------
+Version 0.2.0 (May 5, 2015)
+---------------------------
 
+  * Preliminary support for two-sided chance constraints.
   * ``solvechance`` method renamed to ``solve``
   * The meaning of ``with_probability`` **has changed**. Constraints must now hold with the given probability or greater, which is tractable for 1/2 or greater. A deprecation warning is in place when a small value is provided.
   * The ``@addConstraint`` macro now accepts chance constraints.
