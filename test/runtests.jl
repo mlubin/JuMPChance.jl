@@ -534,6 +534,24 @@ let
         violation = 1- JuMPChance.satisfied_with_probability(cref)
         @test violation ≤ prob_guarantee*ϵ + 1e-5
         @test violation ≥ ϵ - 1e-5 # should be tight
+
+        lval = getValue(l)
+        uval = getValue(u)
+        m = ChanceModel()
+        @defIndepNormal(m, ξ, mean=1, var=1) # translate with mean
+        @defVar(m, l)
+        @defVar(m, u)
+        @defVar(m, x == 1)
+        cref = @addConstraint(m, l ≤ x*ξ ≤ u, with_probability=1-ϵ)
+        @setObjective(m, Min, u-2l)
+
+        solve(m, method=:Reformulate)
+
+        violation = 1- JuMPChance.satisfied_with_probability(cref)
+        @test violation ≤ prob_guarantee*ϵ + 1e-5
+        @test violation ≥ ϵ - 1e-5
+
+        @test_approx_eq getObjectiveValue(m) ((uval+1) - 2(lval+1))
     end
 end
 
@@ -553,5 +571,37 @@ let
         violation = 1- JuMPChance.satisfied_with_probability(cref)
         @test violation ≤ prob_guarantee*ϵ + 1e-5
         @test violation ≥ ϵ - 1e-5
+    end
+end
+
+# constant bounds
+let
+    ϵ = 0.05
+    m = ChanceModel()
+    @defIndepNormal(m, ξ, mean=0, var=1)
+    @defVar(m, x >= 0)
+    cref = @addConstraint(m, -1 ≤ x*ξ ≤ 1, with_probability=1-ϵ)
+    @setObjective(m, Max, x)
+    solve(m, method=:Reformulate)
+    violation = 1- JuMPChance.satisfied_with_probability(cref)
+    @test violation ≤ prob_guarantee*ϵ + 1e-5
+    @test violation ≥ ϵ - 1e-5
+end
+
+# absolute value, random objective
+let
+    ϵ = 0.05
+    srand(998)
+    for q in 1:100
+        m = ChanceModel()
+        @defIndepNormal(m, ξ, mean=0, var=1)
+        @defVar(m, -10 ≤ x ≤ 10)
+        @defVar(m, 0 ≤ c ≤ 10)
+        @defVar(m, t ≤ 100)
+        cref = @addConstraint(m, -t ≤ x*ξ + c ≤ t, with_probability=1-ϵ)
+        @setObjective(m, Min, (rand()-0.5)*x + (rand()-0.5)*c + 0.01*t)
+        solve(m, method=:Reformulate)
+        violation = 1- JuMPChance.satisfied_with_probability(cref)
+        @test violation ≤ prob_guarantee*ϵ + 1e-5
     end
 end
