@@ -97,9 +97,10 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
             # (lbvar, ubvar, t) ∈ \bar S_ϵ
             # lbvar/t ≤ Φ^{-1}(ϵ)
             # ubvar/t ≥ Φ^{-1}(1-ϵ)
-            # ...
+            # ubvar/t - lbvar/t ≥ -2Φ^{-1}(ϵ/2)
             @addConstraint(m, lbvar ≤ Φinv(ϵ)*t)
             @addConstraint(m, ubvar ≥ Φinv(1-ϵ)*t)
+            @addConstraint(m, ubvar - lbvar ≥ -2*Φinv(ϵ/2)*t)
         end
         #println(m)
 
