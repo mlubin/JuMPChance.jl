@@ -34,5 +34,6 @@ Contents
     installation.rst
     quickstart.rst
     solution.rst
+    twoside.rst
     references.rst
 

@@ -516,3 +516,21 @@ let
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) 20 1e-6
 end
+
+# two-sided constraints
+let
+    for ϵ in (0.1, 0.05, 0.005, 0.0005)
+        m = ChanceModel()
+        @defIndepNormal(m, ξ, mean=0, var=1)
+        @defVar(m, l)
+        @defVar(m, u)
+        @defVar(m, x == 1)
+        cref = @addConstraint(m, l ≤ x*ξ ≤ u, with_probability=1-ϵ)
+        @setObjective(m, Min, u-l)
+
+        solve(m, method=:Reformulate)
+
+        violation = 1- JuMPChance.satisfied_with_probability(cref)
+        @test violation ≤ 2ϵ + 1e-5
+    end
+end

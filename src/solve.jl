@@ -8,7 +8,6 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
 
     ccdata = getCCData(m)
     no_uncertains = all([isa(x,Real) for x in ccdata.RVmeans]) && all([isa(x,Real) for x in ccdata.RVvars])
-    has_twoside = length(ccdata.twosidechanceconstr) > 0
     probability_tolerance > 0 || error("Invalid probability tolerance $probability_tolerance")
 
     # merge possible duplicate terms in constraints
@@ -17,6 +16,12 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
     for i in 1:length(chanceconstr)
         chanceconstr[i].ccexpr = merge_duplicates(chanceconstr[i].ccexpr, v, m)
     end
+
+    twosidechance::Vector{TwoSideChanceConstr} = ccdata.twosidechanceconstr
+    for i in 1:length(twosidechance)
+        twosidechance[i].ccexpr = merge_duplicates(twosidechance[i].ccexpr, v, m)
+    end
+    has_twoside = length(twosidechance) > 0
 
     if isa(m.solver,ECOS.ECOSSolver) && !linearize_objective
         reformulate_quadobj_to_conic = true
@@ -69,6 +74,32 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
                 @assert cc.sense == :(>=)
                 @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} - nu*slackvar + ccexpr.constant >= 0)
             end
+        end
+
+        for cc in twosidechance
+            ccexpr = cc.ccexpr
+            cc.lb -= ccexpr.constant
+            cc.ub -= ccexpr.constant
+            ccexpr.constant = AffExpr()
+            nterms = length(ccexpr.vars)
+
+            # add auxiliary variables for variance of each term
+            @defVar(m, varterm[1:nterms])
+            @addConstraint(m, defvar[i=1:nterms], varterm[i] == getStdev(ccexpr.vars[i])*ccexpr.coeffs[i])
+            @defVar(m, t ≥ 0)
+            # conic constraint
+            @addConstraint(m, sum{ varterm[i]^2, i in 1:nterms } <= t^2)
+            ϵ = 1-cc.with_probability
+            @defVar(m, lbvar)
+            @defVar(m, ubvar)
+            @addConstraint(m, lbvar == cc.lb - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+            @addConstraint(m, ubvar == cc.ub - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+            # (lbvar, ubvar, t) ∈ \bar S_ϵ
+            # lbvar/t ≤ Φ^{-1}(ϵ)
+            # ubvar/t ≥ Φ^{-1}(1-ϵ)
+            # ...
+            @addConstraint(m, lbvar ≤ Φinv(ϵ)*t)
+            @addConstraint(m, ubvar ≥ Φinv(1-ϵ)*t)
         end
         #println(m)
 

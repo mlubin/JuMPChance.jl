@@ -27,7 +27,7 @@ type CCData
     RVnames
 end
 
-function ChanceModel(;solver=ECOS.ECOSSolver())
+function ChanceModel(;solver=ECOS.ECOSSolver(verbose=false))
     m = Model(solver=solver)
     m.solvehook = solvehook
     m.ext[:ChanceConstr] = CCData(ChanceConstr[],TwoSideChanceConstr[],0,Any[],Any[],String[])
@@ -130,7 +130,7 @@ function JuMP.affToStr(a::RandomAffExpr)
     return string(join(strs," + "), " + ", string(a.constant))
 end
 
-type ChanceConstr
+type ChanceConstr <: JuMP.JuMPConstraint
     ccexpr::CCAffExpr
     sense::Symbol # :(<=) or :(>=), right-hand side assumed to be zero
     with_probability::Float64 # with this probability *or greater*
@@ -155,6 +155,7 @@ function JuMP.addConstraint(m::Model, constr::ChanceConstr; with_probability::Fl
     
     ccdata = getCCData(m)
     push!(ccdata.chanceconstr, constr)
+    return ConstraintRef{ChanceConstr}(m, length(ccdata.chanceconstr))
 
 end
 
@@ -172,7 +173,7 @@ end
 Base.print(io::IO, a::ChanceConstr) = print(io, JuMP.conToStr(a))
 Base.show( io::IO, a::ChanceConstr) = print(io, JuMP.conToStr(a))
 
-type TwoSideChanceConstr
+type TwoSideChanceConstr <: JuMP.JuMPConstraint
     ccexpr::CCAffExpr
     lb::AffExpr
     ub::AffExpr
@@ -189,6 +190,7 @@ function JuMP.addConstraint(m::Model, constr::TwoSideChanceConstr; with_probabil
 
     ccdata = getCCData(m)
     push!(ccdata.twosidechanceconstr, constr)
+    return ConstraintRef{TwoSideChanceConstr}(m, length(ccdata.twosidechanceconstr))
 
 end
 
@@ -203,6 +205,23 @@ end
 
 Base.print(io::IO, a::TwoSideChanceConstr) = print(io, JuMP.conToStr(a))
 Base.show( io::IO, a::TwoSideChanceConstr) = print(io, JuMP.conToStr(a))
+
+function satisfied_with_probability(r::ConstraintRef{TwoSideChanceConstr})
+    m = r.m
+    ccdata = getCCData(m)
+    cc = ccdata.twosidechanceconstr[r.idx]
+
+    nterms = length(cc.ccexpr.vars)
+    μ = getValue(cc.ccexpr.constant)
+    σ² = 0.0
+    for i in 1:nterms
+        μ += getValue(cc.ccexpr.coeffs[i])*getMean(cc.ccexpr.vars[i])
+        σ² += (getStdev(cc.ccexpr.vars[i])*getValue(cc.ccexpr.coeffs[i]))^2
+    end
+    σ = sqrt(σ²)
+    return cdf(Normal(μ,σ), getValue(cc.ub)) - cdf(Normal(μ,σ), getValue(cc.lb))
+
+end
 
 include("operators.jl")
 include("macros.jl")
