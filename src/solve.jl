@@ -67,7 +67,12 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
             @addConstraint(m, defvar[i=1:nterms], varterm[i] == getStdev(ccexpr.vars[i])*ccexpr.coeffs[i])
             @defVar(m, slackvar >= 0)
             # conic constraint
-            @addConstraint(m, sum{ varterm[i]^2, i in 1:nterms } <= slackvar^2)
+            if nterms > 1
+                @addConstraint(m, sum{ varterm[i]^2, i in 1:nterms } <= slackvar^2)
+            else
+                @addConstraint(m, slackvar >= varterm[1])
+                @addConstraint(m, slackvar >= -varterm[1])
+            end
             if cc.sense == :(<=)
                 @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} + nu*slackvar + ccexpr.constant <= 0)
             else
