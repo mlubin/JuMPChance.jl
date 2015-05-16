@@ -40,16 +40,7 @@ macro defIndepNormal(m, x, mean, var)
     end
 end
 
-# Extensions to make JuMP macros work with IndepNormals
-
-(*)(x::IndepNormal) = x
-
-function JuMP.addToExpression(aff::JuMP.GenericAffExpr, c, x)
-    return aff + c*x
-end
-function JuMP.addToExpression(val::Real, c, x::Union(CCAffExpr,RandomAffExpr))
-    return val + c*x
-end
+# Extensions to make JuMP macros work with chance constraints
 
 function JuMP._construct_constraint!(faff::CCAffExpr, sense::Symbol)
     if sense == :(<=) || sense == :≤
