@@ -20,8 +20,7 @@ macro defIndepNormal(m, x, mean, var)
             error("Syntax error: Expected $var to be of form var[...]")
         end
 
-        condition = :()
-        refcall, idxvars, idxsets, idxpairs = JuMP.buildrefsets(x)
+        refcall, idxvars, idxsets, idxpairs, condition = JuMP.buildrefsets(x)
         varname = JuMP.getname(x)
 
         varstr = :(string($(string(varname)),"["))
@@ -53,7 +52,6 @@ function JuMP.addToExpression(val::Real, c, x::Union(CCAffExpr,RandomAffExpr))
 end
 
 function JuMP._construct_constraint!(faff::CCAffExpr, sense::Symbol)
-    sense in JuMP.valid_senses || error("Unrecognized sense $sense")
     if sense == :(<=) || sense == :≤
         return ChanceConstr(faff, :(<=))
     elseif sense == :(>=) || sense == :≥
