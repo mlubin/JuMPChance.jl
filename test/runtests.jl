@@ -284,6 +284,25 @@ let
     end
 end
 
+# addConstraints
+let
+    for method in [:Reformulate,:Cuts]
+        m = ChanceModel()
+        @defIndepNormal(m, x, mean=0, var=1)
+        @defVar(m, z >= -100) # so original problem is bounded
+
+        @setObjective(m, Min, z)
+        @addConstraints m begin
+            z >= -100
+            z*x >= -1, with_probability->0.95
+        end
+
+        status = solve(m, method=method)
+        @test status == :Optimal
+        @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
+    end
+end
+
 # robust but no uncertainty budget
 let
     m = ChanceModel()
