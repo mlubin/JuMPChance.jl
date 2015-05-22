@@ -9,7 +9,7 @@ export ChanceModel,
     IndepNormal,
     affToStr,
     getMean,
-    getVar,
+    getVariance,
     getStdev,
     @defIndepNormal
 
@@ -68,12 +68,12 @@ function getMean(v::IndepNormal)
     return ccdata.RVmeans[v.idx]
 end
 
-function getVar(v::IndepNormal)
+function getVariance(v::IndepNormal)
     ccdata = getCCData(v.m)
     return ccdata.RVvars[v.idx]
 end
 
-getStdev(v::IndepNormal) = sqrt(getVar(v))
+getStdev(v::IndepNormal) = sqrt(getVariance(v))
 
 typealias CCAffExpr JuMP.GenericAffExpr{AffExpr,IndepNormal}
 

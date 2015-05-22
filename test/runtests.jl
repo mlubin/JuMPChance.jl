@@ -141,7 +141,7 @@ let
 
 
     @test getMean(z[5]) == 5
-    @test getVar(z[5]) == 1
+    @test getVariance(z[5]) == 1
 
     @addConstraint(m, (3v+1)*x + 10 <= 20, with_probability=0.05)
     @test conToStr(JuMPChance.getCCData(m).chanceconstr[1]) == "(3 v + 1)*x + -10 >= 0, with probability 0.95"

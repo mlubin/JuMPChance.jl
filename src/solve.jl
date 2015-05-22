@@ -183,7 +183,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
             for k in 1:nterms
                 exprval = getValue(ccexpr.coeffs[k])
                 mean += getMean(ccexpr.vars[k])*exprval
-                var += getVar(ccexpr.vars[k])*exprval^2
+                var += getVariance(ccexpr.vars[k])*exprval^2
             end
             mean += getValue(ccexpr.constant)
             if var < 1e-10 # corner case, need to handle carefully
