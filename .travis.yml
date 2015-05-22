@@ -9,6 +9,6 @@ notifications:
 script:
   - sudo apt-get install libgmp-dev -y
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia --check-bounds=yes -e 'Pkg.init(); Pkg.checkout("JuMP"); Pkg.clone(pwd()); Pkg.build("JuMPChance"); Pkg.test("JuMPChance"; coverage=true)'
+  - julia --check-bounds=yes -e 'Pkg.init(); Pkg.add("JuMP"); Pkg.checkout("JuMP"); Pkg.clone(pwd()); Pkg.build("JuMPChance"); Pkg.test("JuMPChance"; coverage=true)'
 after_success:
     - julia -e 'cd(Pkg.dir("JuMPChance")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
