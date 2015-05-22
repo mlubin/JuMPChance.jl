@@ -285,6 +285,7 @@ let
 end
 
 # addConstraints
+#=
 let
     for method in [:Reformulate,:Cuts]
         m = ChanceModel()
@@ -302,6 +303,7 @@ let
         @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
     end
 end
+=#
 
 # robust but no uncertainty budget
 let
