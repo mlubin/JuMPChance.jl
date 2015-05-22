@@ -41,6 +41,7 @@ macro defIndepNormal(m, x, mean, var)
 end
 
 # Extensions to make JuMP macros work with chance constraints
+(*)(x::IndepNormal) = x
 
 function JuMP._construct_constraint!(faff::CCAffExpr, sense::Symbol)
     if sense == :(<=) || sense == :≤
