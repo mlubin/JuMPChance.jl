@@ -159,7 +159,31 @@ function JuMP.addConstraint(m::Model, constr::ChanceConstr; with_probability::Fl
 
 end
 
+function satisfied_with_probability(r::ConstraintRef{ChanceConstr})
+    m = r.m
+    ccdata = getCCData(m)
+    cc = ccdata.chanceconstr[r.idx]
 
+    no_uncertains = all(x->isa(x,Real), ccdata.RVmeans) && all(x->isa(x,Real), ccdata.RVvars)
+    if !no_uncertains
+        error("satisfied_with_probability not implemented for distributionally robust constraints")
+    end
+
+    nterms = length(cc.ccexpr.vars)
+    μ = getValue(cc.ccexpr.constant)
+    σ² = 0.0
+    for i in 1:nterms
+        μ += getValue(cc.ccexpr.coeffs[i])*getMean(cc.ccexpr.vars[i])
+        σ² += (getStdev(cc.ccexpr.vars[i])*getValue(cc.ccexpr.coeffs[i]))^2
+    end
+    σ = sqrt(σ²)
+    d = Normal(μ,σ)
+    if cc.sense == :(>=)
+        return 1 - cdf(d, 0)
+    else
+        return cdf(d, 0)
+    end
+end
 
 function JuMP.conToStr(c::ChanceConstr)
     s = "$(affToStr(c.ccexpr)) $(c.sense) 0"

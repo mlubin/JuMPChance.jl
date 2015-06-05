@@ -198,11 +198,12 @@ let
         @defVar(m, z >= -100) # so original problem is bounded
 
         @setObjective(m, Min, z)
-        @addConstraint(m, z*x >= -1, with_probability=0.95)
+        cref = @addConstraint(m, z*x >= -1, with_probability=0.95)
 
         status = solve(m, method=method)
         @test status == :Optimal
         @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
+        @test JuMPChance.satisfied_with_probability(cref) > 0.95 - 1e-4
     end
 end
 
@@ -230,11 +231,12 @@ let
         @defVar(m, z >= -100) # so original problem is bounded
 
         @setObjective(m, Min, z)
-        @addConstraint(m, -z*x <= 1, with_probability=0.95)
+        cref = @addConstraint(m, -z*x <= 1, with_probability=0.95)
 
         status = solve(m, method=method)
         @test status == :Optimal
         @test_approx_eq_eps getValue(z) -1/quantile(Normal(0,1),0.95) 1e-6
+        @test JuMPChance.satisfied_with_probability(cref) > 0.95 - 1e-4
     end
 end
 
@@ -384,10 +386,11 @@ let
     @defVar(m, z >= -100)
     @setObjective(m, Min, z)
 
-    @addConstraint(m, z*x >= -1, with_probability=0.95, uncertainty_budget_mean=1, uncertainty_budget_variance=0)
+    cref = @addConstraint(m, z*x >= -1, with_probability=0.95, uncertainty_budget_mean=1, uncertainty_budget_variance=0)
     status = solve(m, method=:Cuts)
     @test status == :Optimal
     @test_approx_eq_eps getValue(z) -1/(1+quantile(Normal(0,1),0.95)) 1e-6
+    @test_throws ErrorException JuMPChance.satisfied_with_probability(cref)
 end
 
 # uncertain variance, but no budget
