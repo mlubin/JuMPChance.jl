@@ -258,7 +258,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
     (debug && !do_lazy) && println("Solving deterministic model")
 
     if do_lazy
-        setLazyCallback(m, addcuts, fractional=true)
+        addLazyCallback(m, addcuts, fractional=true)
     end
     #tic()
     status = solve(m, suppress_warnings=suppress_warnings, ignore_solve_hook=true)
