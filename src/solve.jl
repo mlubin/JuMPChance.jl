@@ -81,7 +81,11 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
             end
         end
 
-        for cc in twosidechance
+        @defVar(m, lbvar[1:length(twosidechance)])
+        @defVar(m, ubvar[1:length(twosidechance)])
+        @defVar(m, t[1:length(twosidechance)] ≥ 0)
+        for k in 1:length(twosidechance)
+            cc = twosidechance[k]
             ccexpr = cc.ccexpr
             cc.lb -= ccexpr.constant
             cc.ub -= ccexpr.constant
@@ -91,25 +95,38 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
             # add auxiliary variables for variance of each term
             @defVar(m, varterm[1:nterms])
             @addConstraint(m, defvar[i=1:nterms], varterm[i] == getStdev(ccexpr.vars[i])*ccexpr.coeffs[i])
-            @defVar(m, t ≥ 0)
             # conic constraint
-            @addConstraint(m, sum{ varterm[i]^2, i in 1:nterms } <= t^2)
+            @addConstraint(m, sum{ varterm[i]^2, i in 1:nterms } <= t[k]^2)
             ϵ = 1-cc.with_probability
-            @defVar(m, lbvar)
-            @defVar(m, ubvar)
-            @addConstraint(m, lbvar == cc.lb - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
-            @addConstraint(m, ubvar == cc.ub - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+            @addConstraint(m, lbvar[k] == cc.lb - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+            @addConstraint(m, ubvar[k] == cc.ub - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
             # (lbvar, ubvar, t) ∈ \bar S_ϵ
             # lbvar/t ≤ Φ^{-1}(ϵ)
             # ubvar/t ≥ Φ^{-1}(1-ϵ)
             # ubvar/t - lbvar/t ≥ -2Φ^{-1}(ϵ/2)
-            @addConstraint(m, lbvar ≤ Φinv(ϵ)*t)
-            @addConstraint(m, ubvar ≥ Φinv(1-ϵ)*t)
-            @addConstraint(m, ubvar - lbvar ≥ -2*Φinv(ϵ/2)*t)
+            @addConstraint(m, lbvar[k] ≤ Φinv(ϵ)*t[k])
+            @addConstraint(m, ubvar[k] ≥ Φinv(1-ϵ)*t[k])
+            @addConstraint(m, ubvar[k] - lbvar[k] ≥ -2*Φinv(ϵ/2)*t[k])
         end
         #println(m)
 
-        return solve(m,suppress_warnings=suppress_warnings, ignore_solve_hook=true)
+        status = solve(m,suppress_warnings=suppress_warnings, ignore_solve_hook=true)
+
+        #=
+        # debug two-sided constraints
+        X = Float64[]
+        Y = Float64[]
+        for k in 1:length(twosidechance)
+            l = getValue(lbvar[k])/getValue(t[k])
+            u = getValue(ubvar[k])/getValue(t[k])
+            push!(X,l)
+            push!(Y,u)
+            println("$k $l $u $(Φ(u) - Φ(l))")
+        end
+        println("done")
+        =#
+
+        return status
 
     else
         has_twoside && error("Two-sided chance constraints are not currently supported with method = :Cuts. Use method = :Reformuate instead.")
