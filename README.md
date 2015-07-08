@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/mlubin/JuMPChance.jl.svg?branch=master)](https://travis-ci.org/mlubin/JuMPChance.jl)
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/mlubin/JuMPChance.jl?branch=master&svg=true)](https://ci.appveyor.com/project/mlubin/jumpchance-jl/branch/master)
-[![Coverage Status](https://img.shields.io/coveralls/mlubin/JuMPChance.jl.svg)](https://coveralls.io/r/mlubin/JuMPChance.jl?branch=master)
+[![Coverage Status](https://coveralls.io/repos/mlubin/JuMPChance.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/mlubin/JuMPChance.jl?branch=master)
 
 JuMPChance (formerly CCJuMP) is an extension to [JuMP](https://github.com/JuliaOpt/JuMP.jl) for formulating and solving optimization problems with chance constraints (also known as probabilistic constraints). JuMPChance currently supports only a particular class of chance constraints involving affine combinations of jointly normal random variables, a classical formulation that's known to be efficiently solvable by using second-order conic programming (SOCP) (although JuMPChance also provides an outer-approximation algorithm which solves a sequence of linear problems).
 
