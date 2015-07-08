@@ -3,6 +3,7 @@
 
 module JuMPChance
 using JuMP
+using Compat
 import ECOS # For now, set ECOS as default since it's the only open-source conic solver availible
 
 export ChanceModel,
@@ -107,7 +108,8 @@ function JuMP.affToStr(a::CCAffExpr)
     ccdata = getCCData(m)
 
     v = IndexedVector(JuMP.AffExpr, 0)
-    a = merge_duplicates(a, v, m)
+    counts = IndexedVector(Int, 0)
+    a = merge_duplicates(a, v, counts, m)
 
     strs = ["($(JuMP.aff_str(JuMP.REPLMode,a.coeffs[i], show_constant=true)))*$(ccdata.RVnames[a.vars[i].idx])" for i in 1:length(a.vars)]
     return string(join(strs," + "), " + ", JuMP.aff_str(JuMP.REPLMode, a.constant, show_constant=true))

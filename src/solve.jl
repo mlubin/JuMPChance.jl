@@ -12,14 +12,15 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
 
     # merge possible duplicate terms in constraints
     v = IndexedVector(AffExpr, ccdata.numRVs)
+    counts = IndexedVector(Int, ccdata.numRVs)
     chanceconstr::Vector{ChanceConstr} = ccdata.chanceconstr
     for i in 1:length(chanceconstr)
-        chanceconstr[i].ccexpr = merge_duplicates(chanceconstr[i].ccexpr, v, m)
+        chanceconstr[i].ccexpr = merge_duplicates(chanceconstr[i].ccexpr, v, counts, m)
     end
 
     twosidechance::Vector{TwoSideChanceConstr} = ccdata.twosidechanceconstr
     for i in 1:length(twosidechance)
-        twosidechance[i].ccexpr = merge_duplicates(twosidechance[i].ccexpr, v, m)
+        twosidechance[i].ccexpr = merge_duplicates(twosidechance[i].ccexpr, v, counts, m)
     end
     has_twoside = length(twosidechance) > 0
 
@@ -517,6 +518,17 @@ end
 
 IndexedVector{T}(::Type{T},n::Integer) = IndexedVector(zeros(T,n),zeros(Int,n),0,trues(n))
 
+function addelt!(v::IndexedVector{AffExpr},i::Integer,val::AffExpr)
+    if v.empty[i]  # new index
+        v.elts[i] = copy(val)
+        v.nzidx[v.nnz += 1] = i
+        v.empty[i] = false
+    else
+        append!(v.elts[i], val)
+    end
+    return nothing
+end
+
 function addelt!{T}(v::IndexedVector{T},i::Integer,val::T)
     if v.empty[i]  # new index
         v.elts[i] = val
@@ -554,7 +566,42 @@ end
 # Adapted from JuMP:
 # returns a GenericAffExpr with terms merged
 # assume that v is zero'd
-function merge_duplicates{CoefType}(aff::JuMP.GenericAffExpr{CoefType,IndepNormal}, v::IndexedVector{CoefType}, m::Model)
+function merge_duplicates{CoefType <: JuMP.GenericAffExpr}(aff::JuMP.GenericAffExpr{CoefType,IndepNormal}, v::IndexedVector{CoefType}, counts::IndexedVector{Int}, m::Model)
+    ccdata = getCCData(m)
+
+    resize!(v, ccdata.numRVs)
+    resize!(counts, ccdata.numRVs)
+    # do a first pass to precompute sizes
+    for ind in 1:length(aff.coeffs)
+        var = aff.vars[ind]
+        is(var.m, m) || error("Variable does not belong to this model")
+        addelt!(counts, aff.vars[ind].idx, length(aff.coeffs[ind].vars))
+    end
+    for k in 1:counts.nnz
+        ind = counts.nzidx[k]
+        nterms = counts.elts[k]
+        sizehint!(v.elts[ind].vars, nterms)
+        sizehint!(v.elts[ind].coeffs, nterms)
+    end
+
+    for ind in 1:length(aff.coeffs)
+        addelt!(v, aff.vars[ind].idx, aff.coeffs[ind])
+    end
+    vars = Array(IndepNormal,v.nnz)
+    coeffs = Array(CoefType,v.nnz)
+    for i in 1:v.nnz
+        idx = v.nzidx[i]
+        vars[i] = IndepNormal(m,idx)
+        coeffs[i] = v.elts[idx]
+    end
+    empty!(v)
+    empty!(counts)
+
+    return JuMP.GenericAffExpr(vars, coeffs, aff.constant) # do we need to eliminate duplicates in the constant part also?
+
+end
+
+function merge_duplicates{CoefType <: Number}(aff::JuMP.GenericAffExpr{CoefType,IndepNormal}, v::IndexedVector{CoefType}, m::Model)
     ccdata = getCCData(m)
 
     resize!(v, ccdata.numRVs)
@@ -572,6 +619,6 @@ function merge_duplicates{CoefType}(aff::JuMP.GenericAffExpr{CoefType,IndepNorma
     end
     empty!(v)
 
-    return JuMP.GenericAffExpr(vars, coeffs, aff.constant) # do we need to eliminate duplicates in the constant part also?
+    return JuMP.GenericAffExpr(vars, coeffs, aff.constant)
 
 end
