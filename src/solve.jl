@@ -179,10 +179,10 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
             sumvar = sum([getVariance(ccexpr.vars[i]) for i in 1:nterms])
             sqrtsumvar = sqrt(sumvar)
             if cc.sense == :(<=)
-                @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} + nu*sqrtsumvar*slackvar + ccexpr.constant <= 0)
+                @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} + nu*sqrtsumvar*slackvar[i] + ccexpr.constant <= 0)
             else
                 @assert cc.sense == :(>=)
-                @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} - nu*sqrtsumvar*slackvar + ccexpr.constant >= 0)
+                @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} - nu*sqrtsumvar*slackvar[i] + ccexpr.constant >= 0)
             end
         else
             push!(linearizeindices, i)
