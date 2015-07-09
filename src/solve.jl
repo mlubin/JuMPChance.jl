@@ -1,5 +1,4 @@
 include("distributions.jl")
-# Comment test
 import MathProgBase
 
 @Base.deprecate solvechance(m; kwargs...) solve(m; kwargs...)
