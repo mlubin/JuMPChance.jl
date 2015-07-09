@@ -544,13 +544,12 @@ end
 # special cases when cc becomes linear
 let 
     m = ChanceModel()
-    @defIndepNormal(m, x[1:2], mean=0, var=1)
+    @defIndepNormal(m, x[1:2], mean=1, var=1)
     @defVar(m, z <= 100)
     @defVar(m, y[1:2])
 
     @setObjective(m, Max, z)
-    @addConstraint(m, y[1] == 0)
-    @addConstraint(m, y[2] == 0)
+    @addConstraint(m, y[1] == y[2])
     @addConstraint(m, z + sum{x[i]*y[i], i=1:2} <= 20, with_probability=0.95)
 
 
@@ -562,13 +561,12 @@ end
 
 let 
     m = ChanceModel()
-    @defIndepNormal(m, x[1:2], mean=0, var=1)
+    @defIndepNormal(m, x[1:2], mean=1, var=1)
     @defVar(m, z >= 100)
     @defVar(m, y[1:2])
 
     @setObjective(m, Min, z)
-    @addConstraint(m, y[1] == 0)
-    @addConstraint(m, y[2] == 0)
+    @addConstraint(m, y[1] == y[2])
     @addConstraint(m, z + sum{x[i]*y[i], i=1:2} >= 200, with_probability=0.95)
 
 
