@@ -1,4 +1,5 @@
 include("distributions.jl")
+# Comment test
 import MathProgBase
 
 @Base.deprecate solvechance(m; kwargs...) solve(m; kwargs...)
@@ -63,6 +64,22 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
             ccexpr = cc.ccexpr
             nu = quantile(Normal(0,1),cc.with_probability)
             nterms = length(ccexpr.vars)
+            # case when reformulation results in a linear constraint
+            coeffs = ccexpr.coeffs
+            if nterms == 1 || all(ex -> isequal(ex, coeffs[1]), coeffs)
+                @defVar(m, slackvar >= 0)
+                @addConstraint(m, slackvar >= ccexpr.coeffs[1])
+                @addConstraint(m, slackvar >= -ccexpr.coeffs[1])
+                sumvar = sum([getVariance(ccexpr.vars[i]) for i in 1:nterms])
+                sqrtsumvar = sqrt(sumvar)
+                if cc.sense == :(<=)
+                    @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} + nu*sqrtsumvar*slackvar + ccexpr.constant <= 0)
+                else
+                    @assert cc.sense == :(>=)
+                    @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} - nu*sqrtsumvar*slackvar + ccexpr.constant >= 0)
+                end
+                continue
+            end
             # add auxiliary variables for variance of each term
             @defVar(m, varterm[1:nterms])
             @addConstraint(m, defvar[i=1:nterms], varterm[i] == getStdev(ccexpr.vars[i])*ccexpr.coeffs[i])
