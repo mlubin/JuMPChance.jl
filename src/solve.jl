@@ -105,7 +105,21 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
             cc.ub -= ccexpr.constant
             ccexpr.constant = AffExpr()
             nterms = length(ccexpr.vars)
-
+            coeffs = ccexpr.coeffs
+            if all(ex -> isequal(ex, coeffs[1]), coeffs)
+                @addConstraint(m, t[k] >= ccexpr.coeffs[1])
+                @addConstraint(m, t[k] >= -ccexpr.coeffs[1])
+                sumvar = sum([getVariance(ccexpr.vars[i]) for i in 1:nterms])
+                sqrtsumvar = sqrt(sumvar)
+                ϵ = 1-cc.with_probability
+                @addConstraint(m, lbvar[k] == cc.lb - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+                @addConstraint(m, ubvar[k] == cc.ub - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+                @addConstraint(m, lbvar[k] <= Φinv(ϵ)*sqrtsumvar*t[k])
+                @addConstraint(m, ubvar[k] >= Φinv(1-ϵ)*sqrtsumvar*t[k])
+                @addConstraint(m, ubvar[k] - lbvar[k] >= -2*Φinv(ϵ/2)*sqrtsumvar*t[k])
+                continue
+            end
+            
             # add auxiliary variables for variance of each term
             @defVar(m, varterm[1:nterms])
             @addConstraint(m, defvar[i=1:nterms], varterm[i] == getStdev(ccexpr.vars[i])*ccexpr.coeffs[i])
@@ -166,7 +180,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
     nconstr = length(ccdata.chanceconstr)
     @defVar(m, slackvar[1:nconstr] >= 0)
     varterm = Dict()
-    linearizeindices = Int[]
+    linearizesingleccindices = Int[]
     for i in 1:nconstr
         cc = ccdata.chanceconstr[i]
         ccexpr = cc.ccexpr
@@ -185,7 +199,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
                 @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} - nu*sqrtsumvar*slackvar[i] + ccexpr.constant >= 0)
             end
         else
-            push!(linearizeindices, i)
+            push!(linearizesingleccindices, i)
             if cc.sense == :(<=)
                 @addConstraint(m, sum{getMean(ccexpr.vars[k])*ccexpr.coeffs[k], k=1:nterms} + nu*slackvar[i] + ccexpr.constant <= 0)
             else
@@ -221,7 +235,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
         nviol_obj = 0
         
         # check violated chance constraints
-        for i in linearizeindices
+        for i in linearizesingleccindices
             cc::ChanceConstr = ccdata.chanceconstr[i]
             mean = 0.0
             var = 0.0

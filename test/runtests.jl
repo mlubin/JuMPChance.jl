@@ -543,36 +543,39 @@ end
 
 # special cases when cc becomes linear
 let 
-    m = ChanceModel()
-    @defIndepNormal(m, x[1:2], mean=1, var=1)
-    @defVar(m, z <= 100)
-    @defVar(m, y[1:2])
+    for method in [:Reformulate, :Cuts]
+        m = ChanceModel()
+        @defIndepNormal(m, x[1:2], mean=1, var=1)
+        @defVar(m, z <= 100)
+        @defVar(m, y[1:2])
 
-    @setObjective(m, Max, z)
-    @addConstraint(m, y[1] == y[2])
-    @addConstraint(m, z + sum{x[i]*y[i], i=1:2} <= 20, with_probability=0.95)
+        @setObjective(m, Max, z)
+        @addConstraint(m, y[1] == y[2])
+        @addConstraint(m, z + sum{x[i]*y[i], i=1:2} <= 20, with_probability=0.95)
 
 
-    status = solve(m, method=:Reformulate)
-    @test status == :Optimal
-    @test_approx_eq_eps getValue(z) 20 1e-6
+        status = solve(m, method=method)
+        @test status == :Optimal
+        @test_approx_eq_eps getValue(z) 20 1e-5
+    end
 end
 
 
 let 
-    m = ChanceModel()
-    @defIndepNormal(m, x[1:2], mean=1, var=1)
-    @defVar(m, z >= 100)
-    @defVar(m, y[1:2])
+    for method in [:Reformulate, :Cuts]
+        m = ChanceModel()
+        @defIndepNormal(m, x[1:2], mean=1, var=1)
+        @defVar(m, z >= 100)
+        @defVar(m, y[1:2])
 
-    @setObjective(m, Min, z)
-    @addConstraint(m, y[1] == y[2])
-    @addConstraint(m, z + sum{x[i]*y[i], i=1:2} >= 200, with_probability=0.95)
+        @setObjective(m, Min, z)
+        @addConstraint(m, y[1] == y[2])
+        @addConstraint(m, z + sum{x[i]*y[i], i=1:2} >= 200, with_probability=0.95)
 
-
-    status = solve(m, method=:Reformulate)
-    @test status == :Optimal
-    @test_approx_eq_eps getValue(z) 200 1e-6
+        status = solve(m, method=method)
+        @test status == :Optimal
+        @test_approx_eq_eps getValue(z) 200 1e-5
+    end
 end
 
 # two-sided constraints
