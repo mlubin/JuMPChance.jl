@@ -20,22 +20,23 @@ Note that :math:`\bar S_\epsilon` is the `conic hull <http://en.wikipedia.org/wi
 
     S_\epsilon = \{ (l,u) : \Phi(u) - \Phi(l) \geq 1-\epsilon \}
 
-A report outlining these results in more detail is currently in preparation.
+A report outlining these results is available on `arXiv <http://arxiv.org/abs/1507.01995>`_.
 
 Using two-sided constraints
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The syntax for two-sided constraints is as follows::
 
-    @addConstraint(m, l <= x*z <= u, with_probability = 0.95)
+    @addConstraint(m, l <= x*z <= u, with_probability = 0.95, approx="1.25")
+    @addConstraint(m, l <= x*z <= u, with_probability = 0.95, approx="2.0")
 
 Any affine expression of the decision variables can appear as lower or upper bounds. Random variables may only appear in the expression in the middle. You can use ``sum{}`` as in standard JuMP constraints, e.g.::
 
     @addConstraint(m, l <= sum{ x[i]*z[i], i=1:n } + sum{ c[j], j=1:m } <= u)
 
-Given a chance constraint with probability :math:`1-\epsilon`, the current implementation guarantees that the constraint will be satisfied with probability :math:`1-1.25\epsilon`. This is *not* a conservative approximation. After a model is solved, you can check the probability level at which a constraint holds as follows::
+Given a chance constraint with probability :math:`1-\epsilon`, the current implementation provides two different formulations, indicated by the ``approx`` parameter. The ``approx`` parameter may be set to ``"1.25"`` or ``"2.0"``. The formulation guarantees that that the constraint will be satisfied with probability :math:`1-approx*\epsilon`. This is *not* a conservative approximation. After a model is solved, you can check the probability level at which a constraint holds as follows::
 
-    constraint_ref = @addConstraint(m, l <= x*z <= u, with_probability = 1-0.05)
+    constraint_ref = @addConstraint(m, l <= x*z <= u, with_probability = 1-0.05, approx="1.25")
     solve(m, method=:Reformulate)
     satisfied_with = JuMPChance.satisfied_with_probability(constrinat_ref)
     println("The chance constraint is satisfied with probability $satisfied_with.")
