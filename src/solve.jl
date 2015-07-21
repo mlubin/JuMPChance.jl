@@ -3,7 +3,7 @@ import MathProgBase
 
 @Base.deprecate solvechance(m; kwargs...) solve(m; kwargs...)
 
-function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false, lazy_constraints::Bool=false)
+function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false, lazy_constraints::Bool=false, silent::Bool=false)
     @assert method == :Reformulate || method == :Cuts
 
     ccdata = getCCData(m)
@@ -164,9 +164,9 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
         #has_twoside && error("Two-sided chance constraints are not currently supported with method = :Cuts. Use method = :Reformuate instead.")
         # check that we have pure chance constraints
         if no_uncertains
-            solvecc_cuts(m, suppress_warnings, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance, lazy_constraints)
+            solvecc_cuts(m, suppress_warnings, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance, lazy_constraints, silent)
         else
-            solverobustcc_cuts(m, suppress_warnings, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance, lazy_constraints)
+            solverobustcc_cuts(m, suppress_warnings, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance, lazy_constraints, silent)
         end
     end
 
@@ -174,7 +174,7 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
 
 end
 
-function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::Float64, linearize_objective::Bool, debug::Bool, iteration_limit::Int, objective_linearization_tolerance::Float64, lazy_constraints::Bool)
+function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::Float64, linearize_objective::Bool, debug::Bool, iteration_limit::Int, objective_linearization_tolerance::Float64, lazy_constraints::Bool, silent::Bool)
 
     ccdata = getCCData(m)
 
@@ -418,11 +418,11 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
         nviol, nviol_obj = addcuts(nothing)
  
         if nviol == 0 && nviol_obj == 0
-            println("Done after $niter iterations")
+            silent || println("Done after $niter iterations")
             #toc()
             return :Optimal
         else
-            println("Iteration $niter: $nviol constraint violations, $nviol_obj objective linearization violations")
+            silent || println("Iteration $niter: $nviol constraint violations, $nviol_obj objective linearization violations")
         end
         status = solve(m, suppress_warnings=suppress_warnings, ignore_solve_hook=true)
         if status != :Optimal
@@ -436,7 +436,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
 
 end
 
-function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::Float64, linearize_objective::Bool, debug::Bool, iteration_limit::Int, objective_linearization_tolerance::Float64, lazy_constraints::Bool)
+function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::Float64, linearize_objective::Bool, debug::Bool, iteration_limit::Int, objective_linearization_tolerance::Float64, lazy_constraints::Bool, silent::Bool)
 
     ccdata = getCCData(m)
 
@@ -629,10 +629,10 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
         end
 
         if nviol == 0 && nviol_obj == 0
-            println("Done after $niter iterations")
+            silent || println("Done after $niter iterations")
             return :Optimal
         else
-            println("Iteration $niter: $nviol constraint violations, $nviol_obj objective linearization violations")
+            silent || println("Iteration $niter: $nviol constraint violations, $nviol_obj objective linearization violations")
         end
         status = solve(m, suppress_warnings=suppress_warnings, ignore_solve_hook=true)
         if status != :Optimal
