@@ -3,7 +3,6 @@ using Base.Test
 using Distributions
 using GLPKMathProgInterface
 
-
 let
     m = ChanceModel()
     @defIndepNormal(m, x, mean=1, var=1)
@@ -578,6 +577,46 @@ let
     end
 end
 
+# cc vs SOCP check
+let
+    for method in [:Reformulate, :Cuts], ϵ in [0.001, 0.01, 0.005, 0.05], σ² in [0, 1]
+        debug = false
+        m = ChanceModel()
+        @defIndepNormal(m, ω₁, mean=0, var=σ²)
+        @defIndepNormal(m, ω₂, mean=1, var=σ²)
+        @defVar(m, z)
+        @defVar(m, x[1:2])
+        @addConstraint(m, x[1] >= 3)
+        @addConstraint(m, x[2] >= 2)
+        @addConstraint(m, x[1]*ω₁ + x[2]*ω₂ <= z, with_probability=1-ϵ)
+        @setObjective(m, Min, z)
+        
+        status = solve(m, probability_tolerance=1e-12, debug=debug, method=method)
+
+        objval = getObjectiveValue(m)
+        @test status == :Optimal
+
+        m = Model()
+        nu = quantile(Normal(0,1),1-ϵ)
+        @defVar(m, z)
+        @defVar(m, x[1:2])
+        @defVar(m, varterm[1:2] >= 0)
+        @defVar(m, t >= 0)
+        @addConstraint(m, x[1] >= 3)
+        @addConstraint(m, x[2] >= 2)
+        @addConstraint(m, defvar[i=1:2], varterm[i] == sqrt(σ²)*x[i])
+        @addConstraint(m, x[2] + nu*t <= z)
+        @addConstraint(m, sum{ varterm[i]^2, i=1:2} <= t^2)
+        @setObjective(m, Min, z)
+        
+        status = solve(m)
+        @test status == :Optimal
+        @test_approx_eq_eps getObjectiveValue(m) objval 1e-5
+
+    end
+end
+
+
 # test for treating a two-sided constraints as two one sided constraints
 # (a) one random variable model, with mean = 0 and var = 1
 let
@@ -694,6 +733,39 @@ let
         
         m = ChanceModel()
         @defIndepNormal(m, ω[1:4], mean=1, var=1)
+        @defVar(m, l)
+        @defVar(m, u)
+        @defVar(m, x[1:4])
+        @addConstraint(m, xcons[i=1:4], x[i] == i)
+        @addConstraint(m, sum{i*x[i]*ω[i], i=1:4}>= l, with_probability=1-ϵ)
+        @addConstraint(m, sum{i*x[i]*ω[i], i=1:4} <= u, with_probability=1-ϵ)
+        @setObjective(m, Min, u-2l)
+
+        solve(m, method=method)
+
+        @test_approx_eq_eps getObjectiveValue(m) objval 1e-5
+    end
+end
+
+# (e) multiple random variable model (μ=1, σ²=0), with different coefficients
+let
+    for method in [:Reformulate, :Cuts]
+        ϵ = 0.005
+        m = ChanceModel()
+        @defIndepNormal(m, ω[1:4], mean=1, var=0)
+        @defVar(m, l)
+        @defVar(m, u)
+        @defVar(m, x[1:4])
+        @addConstraint(m, xcons[i=1:4], x[i] == i)
+        @addConstraint(m, l <= sum{i*x[i]*ω[i], i=1:4} <= u, with_probability=1-ϵ)
+        @setObjective(m, Min, u-2l)
+
+        solve(m, method=method)
+
+        objval = getObjectiveValue(m)
+        
+        m = ChanceModel()
+        @defIndepNormal(m, ω[1:4], mean=1, var=0)
         @defVar(m, l)
         @defVar(m, u)
         @defVar(m, x[1:4])
