@@ -116,7 +116,9 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
                 @addConstraint(m, ubvar[k] == cc.ub - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
                 @addConstraint(m, lbvar[k] <= Φinv(ϵ)*sqrtsumvar*t[k])
                 @addConstraint(m, ubvar[k] >= Φinv(1-ϵ)*sqrtsumvar*t[k])
-                #@addConstraint(m, ubvar[k] - lbvar[k] >= -2*Φinv(ϵ/2)*sqrtsumvar*t[k])
+                if cc.approx == "1.25"
+                    @addConstraint(m, ubvar[k] - lbvar[k] >= -2*Φinv(ϵ/2)*sqrtsumvar*t[k])
+                end
                 continue
             end
             
@@ -134,7 +136,9 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
             # ubvar/t - lbvar/t ≥ -2Φ^{-1}(ϵ/2)
             @addConstraint(m, lbvar[k] ≤ Φinv(ϵ)*t[k])
             @addConstraint(m, ubvar[k] ≥ Φinv(1-ϵ)*t[k])
-            #@addConstraint(m, ubvar[k] - lbvar[k] ≥ -2*Φinv(ϵ/2)*t[k])
+            if cc.approx == "1.25"
+                @addConstraint(m, ubvar[k] - lbvar[k] ≥ -2*Φinv(ϵ/2)*t[k])
+            end
         end
         #println(m)
 
@@ -239,8 +243,9 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
             @addConstraint(m, ubvar[k] == cc.ub - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
             @addConstraint(m, lbvar[k] <= Φinv(ϵ)*sqrtsumvar*t[k])
             @addConstraint(m, ubvar[k] >= Φinv(1-ϵ)*sqrtsumvar*t[k])
-            #@addConstraint(m, ubvar[k] - lbvar[k] >= -2*Φinv(ϵ/2)*sqrtsumvar*t[k])
-            continue
+            if cc.approx == "1.25"
+                @addConstraint(m, ubvar[k] - lbvar[k] >= -2*Φinv(ϵ/2)*sqrtsumvar*t[k])
+            end
         else
             push!(linearizetwosidechanceconstr, k)
             @defVar(m, twosidechancevarterm[k][1:nterms])
@@ -250,7 +255,9 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
             @addConstraint(m, ubvar[k] == cc.ub - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
             @addConstraint(m, lbvar[k] ≤ Φinv(ϵ)*t[k])
             @addConstraint(m, ubvar[k] ≥ Φinv(1-ϵ)*t[k])
-            #@addConstraint(m, ubvar[k] - lbvar[k] ≥ -2*Φinv(ϵ/2)*t[k])
+            if cc.approx == "1.25"
+                @addConstraint(m, ubvar[k] - lbvar[k] ≥ -2*Φinv(ϵ/2)*t[k])
+            end
         end
     end
 

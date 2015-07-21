@@ -204,15 +204,20 @@ type TwoSideChanceConstr <: JuMP.JuMPConstraint
     lb::AffExpr
     ub::AffExpr
     with_probability::Float64 # with this probability *or greater*
+    approx::AbstractString # outer approximation model used for this constraint.
 end
 
-TwoSideChanceConstr(ccexpr::CCAffExpr,lb::AffExpr,ub::AffExpr) = TwoSideChanceConstr(ccexpr, lb, ub, NaN)
+TwoSideChanceConstr(ccexpr::CCAffExpr,lb::AffExpr,ub::AffExpr) = TwoSideChanceConstr(ccexpr, lb, ub, NaN, "none")
 
-function JuMP.addConstraint(m::Model, constr::TwoSideChanceConstr; with_probability::Float64=NaN)
+function JuMP.addConstraint(m::Model, constr::TwoSideChanceConstr; with_probability::Float64=NaN, approx::AbstractString="")
     if !(0.5 < with_probability < 1)
         error("Must specify with_probability between 1/2 and 1")
     end
     constr.with_probability = with_probability
+    if approx != "1.25" && approx != "2.0"
+        error("approx paramater must be provided as \"1.25\" or \"2.0\". See documentation for further details")
+    end
+    constr.approx = approx
 
     ccdata = getCCData(m)
     push!(ccdata.twosidechanceconstr, constr)
