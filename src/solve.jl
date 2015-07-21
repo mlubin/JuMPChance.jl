@@ -116,7 +116,7 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
                 @addConstraint(m, ubvar[k] == cc.ub - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
                 @addConstraint(m, lbvar[k] <= Φinv(ϵ)*sqrtsumvar*t[k])
                 @addConstraint(m, ubvar[k] >= Φinv(1-ϵ)*sqrtsumvar*t[k])
-                @addConstraint(m, ubvar[k] - lbvar[k] >= -2*Φinv(ϵ/2)*sqrtsumvar*t[k])
+                #@addConstraint(m, ubvar[k] - lbvar[k] >= -2*Φinv(ϵ/2)*sqrtsumvar*t[k])
                 continue
             end
             
@@ -134,7 +134,7 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
             # ubvar/t - lbvar/t ≥ -2Φ^{-1}(ϵ/2)
             @addConstraint(m, lbvar[k] ≤ Φinv(ϵ)*t[k])
             @addConstraint(m, ubvar[k] ≥ Φinv(1-ϵ)*t[k])
-            @addConstraint(m, ubvar[k] - lbvar[k] ≥ -2*Φinv(ϵ/2)*t[k])
+            #@addConstraint(m, ubvar[k] - lbvar[k] ≥ -2*Φinv(ϵ/2)*t[k])
         end
         #println(m)
 
@@ -157,7 +157,7 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
         return status
 
     else
-        has_twoside && error("Two-sided chance constraints are not currently supported with method = :Cuts. Use method = :Reformuate instead.")
+        #has_twoside && error("Two-sided chance constraints are not currently supported with method = :Cuts. Use method = :Reformuate instead.")
         # check that we have pure chance constraints
         if no_uncertains
             solvecc_cuts(m, suppress_warnings, probability_tolerance, linearize_objective, debug, iteration_limit, objective_linearization_tolerance, lazy_constraints)
@@ -176,12 +176,18 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
 
     has_integers = any(c-> c != :Cont, m.colCat)
 
-    # set up slack variables and linear constraints
-    nconstr = length(ccdata.chanceconstr)
-    @defVar(m, slackvar[1:nconstr] >= 0)
-    varterm = Dict()
-    linearizesingleccindices = Int[]
-    for i in 1:nconstr
+    # set up slack variables for both one sided and two sided chance constraints
+    nchanceconstr = length(ccdata.chanceconstr)
+    ntwosidechanceconstr = length(ccdata.twosidechanceconstr)
+    @defVar(m, slackvar[1:nchanceconstr] >= 0)
+    @defVar(m, t[1:ntwosidechanceconstr] >= 0)
+    chancevarterm = Dict()
+    twosidechancevarterm = Dict()
+    linearizechanceconstr = Int[]
+    linearizetwosidechanceconstr = Int[]
+    
+    # one sided chance constraints case
+    for i in 1:nchanceconstr
         cc = ccdata.chanceconstr[i]
         ccexpr = cc.ccexpr
         nterms = length(ccexpr.vars)
@@ -199,17 +205,55 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
                 @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} - nu*sqrtsumvar*slackvar[i] + ccexpr.constant >= 0)
             end
         else
-            push!(linearizesingleccindices, i)
+            push!(linearizechanceconstr, i)
             if cc.sense == :(<=)
                 @addConstraint(m, sum{getMean(ccexpr.vars[k])*ccexpr.coeffs[k], k=1:nterms} + nu*slackvar[i] + ccexpr.constant <= 0)
             else
                 @addConstraint(m, sum{getMean(ccexpr.vars[k])*ccexpr.coeffs[k], k=1:nterms} - nu*slackvar[i] + ccexpr.constant >= 0)
             end
             # auxiliary variables
-            @defVar(m, varterm[i][1:nterms])
-            @addConstraint(m, defvar[k=1:nterms], varterm[i][k] == getStdev(ccexpr.vars[k])*ccexpr.coeffs[k])
+            @defVar(m, chancevarterm[i][1:nterms])
+            @addConstraint(m, defvar[k=1:nterms], chancevarterm[i][k] == getStdev(ccexpr.vars[k])*ccexpr.coeffs[k])
         end
     end
+    
+    # Two sided chance constraints with :Cuts option
+    @defVar(m, lbvar[1:ntwosidechanceconstr])
+    @defVar(m, ubvar[1:ntwosidechanceconstr])
+
+    for k in 1:ntwosidechanceconstr
+        cc = ccdata.twosidechanceconstr[k]
+        ccexpr = cc.ccexpr
+        cc.lb -= ccexpr.constant
+        cc.ub -= ccexpr.constant
+        ccexpr.constant = AffExpr()
+        nterms = length(ccexpr.vars)
+        coeffs = ccexpr.coeffs
+        if all(ex -> isequal(ex, coeffs[1]), coeffs)
+            @addConstraint(m, t[k] >= ccexpr.coeffs[1])
+            @addConstraint(m, t[k] >= -ccexpr.coeffs[1])
+            sumvar = sum([getVariance(ccexpr.vars[i]) for i in 1:nterms])
+            sqrtsumvar = sqrt(sumvar)
+            ϵ = 1-cc.with_probability
+            @addConstraint(m, lbvar[k] == cc.lb - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+            @addConstraint(m, ubvar[k] == cc.ub - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+            @addConstraint(m, lbvar[k] <= Φinv(ϵ)*sqrtsumvar*t[k])
+            @addConstraint(m, ubvar[k] >= Φinv(1-ϵ)*sqrtsumvar*t[k])
+            #@addConstraint(m, ubvar[k] - lbvar[k] >= -2*Φinv(ϵ/2)*sqrtsumvar*t[k])
+            continue
+        else
+            push!(linearizetwosidechanceconstr, k)
+            @defVar(m, twosidechancevarterm[k][1:nterms])
+            @addConstraint(m, defvar[i=1:nterms], twosidechancevarterm[k][i] == getStdev(ccexpr.vars[i])*ccexpr.coeffs[i])
+            ϵ = 1-cc.with_probability
+            @addConstraint(m, lbvar[k] == cc.lb - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+            @addConstraint(m, ubvar[k] == cc.ub - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+            @addConstraint(m, lbvar[k] ≤ Φinv(ϵ)*t[k])
+            @addConstraint(m, ubvar[k] ≥ Φinv(1-ϵ)*t[k])
+            #@addConstraint(m, ubvar[k] - lbvar[k] ≥ -2*Φinv(ϵ/2)*t[k])
+        end
+    end
+
 
     # Optionally linearize quadratic objectives
     # Currently only diagonal terms supported
@@ -235,7 +279,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
         nviol_obj = 0
         
         # check violated chance constraints
-        for i in linearizesingleccindices
+        for i in linearizechanceconstr
             cc::ChanceConstr = ccdata.chanceconstr[i]
             mean = 0.0
             var = 0.0
@@ -272,12 +316,56 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
                 nviol += 1
                 # add a linearization
                 if in_callback
-                    @addLazyConstraint(cb, sum{ getValue(varterm[i][k])*varterm[i][k], k in 1:nterms} <= sqrt(var)*slackvar[i])
+                    @addLazyConstraint(cb, sum{ getValue(chancevarterm[i][k])*chancevarterm[i][k], k in 1:nterms} <= sqrt(var)*slackvar[i])
                 else
-                    @addConstraint(m, sum{ getValue(varterm[i][k])*varterm[i][k], k in 1:nterms} <= sqrt(var)*slackvar[i])
+                    @addConstraint(m, sum{ getValue(chancevarterm[i][k])*chancevarterm[i][k], k in 1:nterms} <= sqrt(var)*slackvar[i])
                 end
             end
         end
+        
+        # check violated two sided chance constraint
+        for i in linearizetwosidechanceconstr
+            cc::TwoSideChanceConstr = ccdata.twosidechanceconstr[i]
+            mean = 0.0
+            var = 0.0
+            ccexpr = cc.ccexpr
+            meanub = 0.0
+            meanlb = 0.0
+            nterms = length(ccexpr.vars)
+            for k in 1:nterms
+                exprval = getValue(ccexpr.coeffs[k])
+                mean += getMean(ccexpr.vars[k])*exprval
+                var += getVariance(ccexpr.vars[k])*exprval^2
+            end
+            mean += getValue(ccexpr.constant)
+            meanlb = mean - getValue(cc.lb)
+            meanub = mean - getValue(cc.ub)
+            if var < 1e-10 # corner case, need to handle carefully
+                satisfied_prob_ub = (meanub <= 1e-7) ? 1.0 : 0.0
+                satisfied_prob_lb = (meanlb >= -1e-7) ? 1.0 : 0.0
+            else
+                satisfied_prob_ub = cdf(Normal(meanub,sqrt(var)),0.0)
+                satisfied_prob_lb = 1-cdf(Normal(meanlb,sqrt(var)),0.0)
+            end
+            if satisfied_prob_ub >= cc.with_probability - probability_tolerance  && satisfied_prob_lb >= cc.with_probability - probability_tolerance
+                # constraint is okay!
+                continue
+            else
+                # check violation of quadratic constraint
+                violation = var - getValue(t[i])^2
+                debug && println("Violated: $cc")
+                debug && println("$satisfied_prob $mean $var")
+                debug && println("VIOL $violation")
+                nviol += 1
+                # add a linearization
+                if in_callback
+                    @addLazyConstraint(cb, sum{ getValue(twosidechancevarterm[i][k])*twosidechancevarterm[i][k], k in 1:nterms} <= sqrt(var)*t[i])
+                else
+                    @addConstraint(m, sum{ getValue(twosidechancevarterm[i][k])*twosidechancevarterm[i][k], k in 1:nterms} <= sqrt(var)*t[i])
+                end
+            end
+        end
+
 
         if linearize_objective
             # check violated objective linearizations

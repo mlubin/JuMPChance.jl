@@ -578,6 +578,137 @@ let
     end
 end
 
+# test for treating a two-sided constraints as two one sided constraints
+# (a) one random variable model, with mean = 0 and var = 1
+let
+    for method in [:Reformulate, :Cuts]
+        ϵ = 0.01
+        m = ChanceModel()
+        @defIndepNormal(m, ω, mean=0, var=1)
+        @defVar(m, l)
+        @defVar(m, u)
+        @defVar(m, x == 1)
+        @addConstraint(m, l <= x*ω <= u, with_probability=1-ϵ)
+        @setObjective(m, Min, u-2l)
+
+        solve(m, method=method)
+
+        objval = getObjectiveValue(m)
+        
+        m = ChanceModel()
+        @defIndepNormal(m, ω, mean=0, var=1)
+        @defVar(m, l)
+        @defVar(m, u)
+        @defVar(m, x == 1)
+        @addConstraint(m, x*ω >= l, with_probability=1-ϵ)
+        @addConstraint(m, x*ω <= u, with_probability=1-ϵ)
+        @setObjective(m, Min, u-2l)
+
+        solve(m, method=method)
+
+        @test_approx_eq_eps getObjectiveValue(m) objval 1e-5
+    end
+end
+
+
+# (b) one random variable model, with mean = 1 and var = 1
+let
+    for method in [:Reformulate, :Cuts]
+        ϵ = 0.005
+        m = ChanceModel()
+        @defIndepNormal(m, ω, mean=1, var=1)
+        @defVar(m, l)
+        @defVar(m, u)
+        @defVar(m, x == 1)
+        @addConstraint(m, l <= x*ω <= u, with_probability=1-ϵ)
+        @setObjective(m, Min, u-2l)
+
+        solve(m, method=method)
+
+        objval = getObjectiveValue(m)
+        
+        m = ChanceModel()
+        @defIndepNormal(m, ω, mean=1, var=1)
+        @defVar(m, l)
+        @defVar(m, u)
+        @defVar(m, x == 1)
+        @addConstraint(m, x*ω >= l, with_probability=1-ϵ)
+        @addConstraint(m, x*ω <= u, with_probability=1-ϵ)
+        @setObjective(m, Min, u-2l)
+
+        solve(m, method=method)
+
+        @test_approx_eq_eps getObjectiveValue(m) objval 1e-5
+    end
+end
+
+# (c) multiple random variable model (μ=1, σ²=1), with same coefficients - linear case
+let
+    for method in [:Reformulate, :Cuts]
+        ϵ = 0.005
+        m = ChanceModel()
+        @defIndepNormal(m, ω[1:4], mean=1, var=1)
+        @defVar(m, l)
+        @defVar(m, u)
+        @defVar(m, x[1:4])
+        @addConstraint(m, xcons[i=1:4], x[i] == 1)
+        @addConstraint(m, l <= sum{x[i]*ω[i], i=1:4} <= u, with_probability=1-ϵ)
+        @setObjective(m, Min, u-2l)
+
+        solve(m, method=method)
+
+        objval = getObjectiveValue(m)
+        
+        m = ChanceModel()
+        @defIndepNormal(m, ω[1:4], mean=1, var=1)
+        @defVar(m, l)
+        @defVar(m, u)
+        @defVar(m, x[1:4])
+        @addConstraint(m, xcons[i=1:4], x[i] == 1)
+        @addConstraint(m, sum{x[i]*ω[i], i=1:4}>= l, with_probability=1-ϵ)
+        @addConstraint(m, sum{x[i]*ω[i], i=1:4} <= u, with_probability=1-ϵ)
+        @setObjective(m, Min, u-2l)
+
+        solve(m, method=method)
+
+        @test_approx_eq_eps getObjectiveValue(m) objval 1e-5
+    end
+end
+
+# (d) multiple random variable model (μ=1, σ²=1), with different coefficients
+let
+    for method in [:Reformulate, :Cuts]
+        ϵ = 0.005
+        m = ChanceModel()
+        @defIndepNormal(m, ω[1:4], mean=1, var=1)
+        @defVar(m, l)
+        @defVar(m, u)
+        @defVar(m, x[1:4])
+        @addConstraint(m, xcons[i=1:4], x[i] == i)
+        @addConstraint(m, l <= sum{i*x[i]*ω[i], i=1:4} <= u, with_probability=1-ϵ)
+        @setObjective(m, Min, u-2l)
+
+        solve(m, method=method)
+
+        objval = getObjectiveValue(m)
+        
+        m = ChanceModel()
+        @defIndepNormal(m, ω[1:4], mean=1, var=1)
+        @defVar(m, l)
+        @defVar(m, u)
+        @defVar(m, x[1:4])
+        @addConstraint(m, xcons[i=1:4], x[i] == i)
+        @addConstraint(m, sum{i*x[i]*ω[i], i=1:4}>= l, with_probability=1-ϵ)
+        @addConstraint(m, sum{i*x[i]*ω[i], i=1:4} <= u, with_probability=1-ϵ)
+        @setObjective(m, Min, u-2l)
+
+        solve(m, method=method)
+
+        @test_approx_eq_eps getObjectiveValue(m) objval 1e-5
+    end
+end
+
+#=
 # two-sided constraints
 const prob_guarantee = 1.25
 let
@@ -666,3 +797,5 @@ let
         @test violation ≤ prob_guarantee*ϵ + 1e-5
     end
 end
+
+=#
