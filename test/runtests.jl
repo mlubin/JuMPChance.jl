@@ -203,7 +203,7 @@ facts("Basic chance constraint model") do
         status = solve(m, method=method, silent=true)
         @fact status => :Optimal
         @fact getValue(z) => roughly(-1/quantile(Normal(0,1),0.95),1e-6)
-        @fact JuMPChance.satisfied_with_probability(cref) > 0.95 - 1e-4 => true
+        @fact (JuMPChance.satisfied_with_probability(cref) > 0.95 - 1e-4) => true
     end
 end
 
@@ -234,7 +234,7 @@ facts("Flipped constraint sense") do
         status = solve(m, method=method, silent=true)
         @fact status => :Optimal
         @fact getValue(z) => roughly(-1/quantile(Normal(0,1),0.95),1e-6)
-        @fact JuMPChance.satisfied_with_probability(cref) > 0.95 - 1e-4 => true
+        @fact (JuMPChance.satisfied_with_probability(cref) > 0.95 - 1e-4) => true
     end
 end
 
@@ -761,8 +761,8 @@ facts("Basic two-sided constraints") do
         solve(m, method=method, silent=true)
 
         violation = 1- JuMPChance.satisfied_with_probability(cref)
-        @fact violation ≤ prob_guarantee*ϵ + 1e-5 => true
-        @fact violation ≥ ϵ - 1e-5  => true # should be tight
+        @fact (violation ≤ prob_guarantee*ϵ + 1e-5) => true
+        @fact (violation ≥ ϵ - 1e-5)  => true # should be tight
 
         lval = getValue(l)
         uval = getValue(u)
@@ -777,8 +777,8 @@ facts("Basic two-sided constraints") do
         solve(m, method=method, silent=true)
 
         violation = 1- JuMPChance.satisfied_with_probability(cref)
-        @fact violation ≤ prob_guarantee*ϵ + 1e-5 => true
-        @fact violation ≥ ϵ - 1e-5 => true
+        @fact (violation ≤ prob_guarantee*ϵ + 1e-5) => true
+        @fact (violation ≥ ϵ - 1e-5) => true
 
         @fact getObjectiveValue(m) => roughly((uval+1) - 2(lval+1))
     end
@@ -796,8 +796,8 @@ facts("Basic two-sided constraints") do
         solve(m, method=method, silent=true)
 
         violation = 1- JuMPChance.satisfied_with_probability(cref)
-        @fact violation ≤ prob_guarantee*ϵ + 1e-5 => true
-        @fact violation ≥ ϵ - 1e-5 => true
+        @fact (violation ≤ prob_guarantee*ϵ + 1e-5) => true
+        @fact (violation ≥ ϵ - 1e-5) => true
     end
 
     # constant bounds
@@ -810,8 +810,8 @@ facts("Basic two-sided constraints") do
         @setObjective(m, Max, x)
         solve(m, method=:Reformulate)
         violation = 1- JuMPChance.satisfied_with_probability(cref)
-        @fact violation ≤ prob_guarantee*ϵ + 1e-5 => true
-        @fact violation ≥ ϵ - 1e-5 => true
+        @fact (violation ≤ prob_guarantee*ϵ + 1e-5) => true
+        @fact (violation ≥ ϵ - 1e-5) => true
     end
 
     # absolute value, random objective
@@ -828,7 +828,7 @@ facts("Basic two-sided constraints") do
             @setObjective(m, Min, (rand()-0.5)*x + (rand()-0.5)*c + 0.01*t)
             solve(m, method=:Reformulate)
             violation = 1- JuMPChance.satisfied_with_probability(cref)
-            @fact violation ≤ prob_guarantee*ϵ + 1e-5 => true
+            @fact (violation ≤ prob_guarantee*ϵ + 1e-5) => true
         end
     end
 end
