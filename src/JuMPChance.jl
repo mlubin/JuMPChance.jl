@@ -45,7 +45,7 @@ end
 
 
 # pointer back to JuMP model and r.v. index
-type IndepNormal
+type IndepNormal <: JuMP.AbstractJuMPScalar
     m::Model
     idx::Int
 end

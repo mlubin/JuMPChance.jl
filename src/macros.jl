@@ -41,9 +41,8 @@ macro defIndepNormal(m, x, mean, var)
 end
 
 # Extensions to make JuMP macros work with chance constraints
-(*)(x::IndepNormal) = x
 
-function JuMP._construct_constraint!(faff::CCAffExpr, sense::Symbol)
+function JuMP.constructconstraint!(faff::CCAffExpr, sense::Symbol)
     if sense == :(<=) || sense == :≤
         return ChanceConstr(faff, :(<=))
     elseif sense == :(>=) || sense == :≥
@@ -54,5 +53,5 @@ function JuMP._construct_constraint!(faff::CCAffExpr, sense::Symbol)
     error("Unrecognized constraint type $sense")
 end
 
-JuMP._construct_constraint!(faff::CCAffExpr, lb::AffExpr, ub::AffExpr) = TwoSideChanceConstr(faff, lb, ub)
-JuMP._construct_constraint!(faff::CCAffExpr, lb, ub) = TwoSideChanceConstr(faff, convert(AffExpr,lb), convert(AffExpr,ub))
+JuMP.constructconstraint!(faff::CCAffExpr, lb::AffExpr, ub::AffExpr) = TwoSideChanceConstr(faff, lb, ub)
+JuMP.constructconstraint!(faff::CCAffExpr, lb, ub) = TwoSideChanceConstr(faff, convert(AffExpr,lb), convert(AffExpr,ub))

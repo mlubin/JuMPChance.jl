@@ -35,6 +35,10 @@ end
 (*)(lhs::IndepNormal, rhs::AffExpr) = rhs*lhs
 
 # AffExpr--CCAffExpr
+(+)(lhs::AffExpr,rhs::CCAffExpr) = convert(CCAffExpr,lhs)+rhs
+(+)(lhs::CCAffExpr,rhs::AffExpr) = rhs+lhs
+(-)(lhs::AffExpr,rhs::CCAffExpr) = convert(CCAffExpr,lhs)-rhs
+(-)(lhs::CCAffExpr,rhs::AffExpr) = lhs-convert(CCAffExpr,rhs)
 Base.promote_rule(::Type{AffExpr},::Type{CCAffExpr}) = CCAffExpr
 Base.convert(::Type{CCAffExpr},a::AffExpr) = CCAffExpr(IndepNormal[],AffExpr[],a)
 
@@ -42,6 +46,10 @@ Base.convert(::Type{CCAffExpr},a::AffExpr) = CCAffExpr(IndepNormal[],AffExpr[],a
 (+)(lhs::AffExpr,rhs::RandomAffExpr) = lhs+convert(CCAffExpr,rhs)
 (-)(lhs::AffExpr,rhs::RandomAffExpr) = lhs-convert(CCAffExpr,rhs)
 (*)(lhs::AffExpr,rhs::RandomAffExpr) = CCAffExpr(rhs.vars, [lhs*c for c in rhs.coeffs], lhs*rhs.constant)
+
+# CCAffExpr--RandomAffExpr
+(+)(lhs::CCAffExpr,rhs::RandomAffExpr) = lhs+convert(CCAffExpr,rhs)
+(-)(lhs::CCAffExpr,rhs::RandomAffExpr) = lhs-convert(CCAffExpr,rhs)
 
 # CCAffExpr--CCAffExpr
 # handled by GenericAffExpr fallback
@@ -68,3 +76,7 @@ end
 (+)(lhs::RandomAffExpr,rhs::AffExpr) = rhs+lhs
 (-)(lhs::RandomAffExpr,rhs::AffExpr) = (+)(-rhs,lhs)
 (*)(lhs::RandomAffExpr,rhs::AffExpr) = rhs*lhs
+
+# RandomAffExpr--CCAffExpr
+(+)(lhs::RandomAffExpr,rhs::CCAffExpr) = convert(CCAffExpr,lhs)+rhs
+(-)(lhs::RandomAffExpr,rhs::CCAffExpr) = convert(CCAffExpr,lhs)-rhs
