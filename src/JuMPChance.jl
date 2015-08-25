@@ -111,8 +111,8 @@ function JuMP.affToStr(a::CCAffExpr)
     counts = IndexedVector(Int, 0)
     a = merge_duplicates(a, v, counts, m)
 
-    strs = ["($(JuMP.aff_str(JuMP.REPLMode,a.coeffs[i], show_constant=true)))*$(ccdata.RVnames[a.vars[i].idx])" for i in 1:length(a.vars)]
-    return string(join(strs," + "), " + ", JuMP.aff_str(JuMP.REPLMode, a.constant, show_constant=true))
+    strs = ["($(JuMP.aff_str(JuMP.REPLMode,a.coeffs[i], true)))*$(ccdata.RVnames[a.vars[i].idx])" for i in 1:length(a.vars)]
+    return string(join(strs," + "), " + ", JuMP.aff_str(JuMP.REPLMode, a.constant, true))
 end
 
 
