@@ -1,6 +1,16 @@
 JuMPChance release notes
 ========================
 
+Version 0.2.1 (September 3, 2015)
+---------------------------------
+
+  * Update to JuMP 0.10, new minimum required version.
+  * ``getVar`` renamed to ``getVariance``
+  * New ``satisfied_with_probability`` to check the probability violation at the current solution
+  * Performance improvements
+  * Special preprocessing for cases that can be reduced to linear constraints (thanks Kaarthik Sundar)
+  * For two-sided chance constraints, choice between 2-approximation and 1.25 approximation
+
 Version 0.2.0 (May 5, 2015)
 ---------------------------
 
