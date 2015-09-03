@@ -8,10 +8,10 @@ immutable Normal
 
     function Normal(μ::Real, σ::Real)
     	σ > zero(σ) || error("std.dev. must be positive")
-    	new(float64(μ), float64(σ))
+    	new(@compat(Float64(μ)), @compat(Float64(σ)))
     end
 
-    Normal(μ::Real) = Normal(float64(μ), 1.0)
+    Normal(μ::Real) = Normal(@compat(Float64(μ)), 1.0)
     Normal() = Normal(0.0, 1.0)
 end
 
