@@ -3,6 +3,7 @@ using FactCheck
 using Distributions
 using GLPKMathProgInterface
 import ECOS
+using Compat
 
 facts("Operator overloads and printing") do
     m = ChanceModel()
