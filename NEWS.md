@@ -1,6 +1,11 @@
 JuMPChance release notes
 ========================
 
+Version 0.2.2 (October 4, 2015)
+-------------------------------
+
+  * Fix deprecation warnings on Julia 0.4
+
 Version 0.2.1 (September 3, 2015)
 ---------------------------------
 
