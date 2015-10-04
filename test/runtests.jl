@@ -833,3 +833,5 @@ facts("Basic two-sided constraints") do
         end
     end
 end
+
+FactCheck.exitstatus()
