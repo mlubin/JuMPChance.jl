@@ -18,9 +18,9 @@ for op in (:+, :-, :*)
     end
     if op == :-
         @eval ($op)(lhs::CCAffExpr, rhs::Variable) = (+)(lhs,-rhs)
-        @eval ($op)(lhs::IndepNormal, rhs::Union(Variable,Number)) = (+)(lhs,-rhs)
+        @eval @compat ($op)(lhs::IndepNormal, rhs::Union{Variable,Number}) = (+)(lhs,-rhs)
     else
-        @eval ($op)(lhs::IndepNormal, rhs::Union(Variable,Number)) = ($op)(rhs,lhs)
+        @eval @compat ($op)(lhs::IndepNormal, rhs::Union{Variable,Number}) = ($op)(rhs,lhs)
         @eval ($op)(lhs::CCAffExpr, rhs::Variable) = ($op)(rhs,lhs)
     end
 end

@@ -32,7 +32,7 @@ end
 function ChanceModel(;solver=ECOS.ECOSSolver(verbose=false))
     m = Model(solver=solver)
     m.solvehook = solvehook
-    m.ext[:ChanceConstr] = CCData(ChanceConstr[],TwoSideChanceConstr[],0,Any[],Any[],String[])
+    m.ext[:ChanceConstr] = CCData(ChanceConstr[],TwoSideChanceConstr[],0,Any[],Any[],AbstractString[])
     return m
 end
 
@@ -51,7 +51,7 @@ type IndepNormal <: JuMP.AbstractJuMPScalar
     idx::Int
 end
 
-function IndepNormal(m::Model, mean, var, name::String)
+function IndepNormal(m::Model, mean, var, name::AbstractString)
     ccdata = getCCData(m)
     ccdata.numRVs += 1
     push!(ccdata.RVmeans, mean)

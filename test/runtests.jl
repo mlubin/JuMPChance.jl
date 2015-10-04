@@ -162,7 +162,7 @@ facts("Operator overloads and printing") do
 
     @fact_throws ErrorException @defIndepNormal(m, q, mean=1, var=-1)
     @fact_throws ErrorException @defIndepNormal(m, q, mean=1, var=(-1,1))
-    @fact beginswith(macroexpand(:(@defIndepNormal(m, f(x), mean=1, var=1))).args[1].msg,"Syntax error: Expected") --> true
+    @fact startswith(macroexpand(:(@defIndepNormal(m, f(x), mean=1, var=1))).args[1].msg,"Syntax error: Expected") --> true
 
     @fact affToStr(z[1]+z[2]-2z[3]+10) --> "(1.0)*z[1] + (1.0)*z[2] + (-2.0)*z[3] + 10.0"
 
