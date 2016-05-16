@@ -1,7 +1,6 @@
-include("distributions.jl")
 import MathProgBase
 
-@Base.deprecate solvechance(m; kwargs...) solve(m; kwargs...)
+Φinv(x) = quantile(Normal(0,1),x)
 
 function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false, lazy_constraints::Bool=false, silent::Bool=false)
     @assert method == :Reformulate || method == :Cuts
@@ -43,13 +42,13 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
             # x^2 <= t iff
             # exists y,z s.t. x^2 + y^2 <= z^2
             # z >= 0, y = z - 1, t = 2z-1, t >= 0
-            @defVar(m, quadobj_y[1:qterms])
-            @defVar(m, quadobj_z[1:qterms] >= 0)
-            @defVar(m, quadobj_t[1:qterms] >= 0)
-            @addConstraint(m, quadobj_soc[i=1:qterms], (quadobj.qvars1[i])^2 + quadobj_y[i]^2 <= quadobj_z[i]^2)
-            @addConstraint(m, quadobj_eq1[i=1:qterms], quadobj_y[i] == quadobj_z[i] - 1)
-            @addConstraint(m, quadobj_eq2[i=1:qterms], quadobj_t[i] == 2quadobj_z[i] - 1)
-            @setObjective(m, m.objSense, quadobj.aff + sum{quadobj.qcoeffs[i]*quadobj_t[i], i=1:qterms})
+            @variable(m, quadobj_y[1:qterms])
+            @variable(m, quadobj_z[1:qterms] >= 0)
+            @variable(m, quadobj_t[1:qterms] >= 0)
+            @constraint(m, quadobj_soc[i=1:qterms], (quadobj.qvars1[i])^2 + quadobj_y[i]^2 <= quadobj_z[i]^2)
+            @constraint(m, quadobj_eq1[i=1:qterms], quadobj_y[i] == quadobj_z[i] - 1)
+            @constraint(m, quadobj_eq2[i=1:qterms], quadobj_t[i] == 2quadobj_z[i] - 1)
+            @objective(m, m.objSense, quadobj.aff + sum{quadobj.qcoeffs[i]*quadobj_t[i], i=1:qterms})
         end
     end
 
@@ -66,36 +65,36 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
             # case when reformulation results in a linear constraint
             coeffs = ccexpr.coeffs
             if all(ex -> isequal(ex, coeffs[1]), coeffs)
-                @defVar(m, slackvar >= 0)
-                @addConstraint(m, slackvar >= ccexpr.coeffs[1])
-                @addConstraint(m, slackvar >= -ccexpr.coeffs[1])
-                sumvar = sum([getVariance(ccexpr.vars[i]) for i in 1:nterms])
+                @variable(m, slackvar >= 0)
+                @constraint(m, slackvar >= ccexpr.coeffs[1])
+                @constraint(m, slackvar >= -ccexpr.coeffs[1])
+                sumvar = sum([getvariance(ccexpr.vars[i]) for i in 1:nterms])
                 sqrtsumvar = sqrt(sumvar)
                 if cc.sense == :(<=)
-                    @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} + nu*sqrtsumvar*slackvar + ccexpr.constant <= 0)
+                    @constraint(m, sum{getmean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} + nu*sqrtsumvar*slackvar + ccexpr.constant <= 0)
                 else
                     @assert cc.sense == :(>=)
-                    @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} - nu*sqrtsumvar*slackvar + ccexpr.constant >= 0)
+                    @constraint(m, sum{getmean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} - nu*sqrtsumvar*slackvar + ccexpr.constant >= 0)
                 end
                 continue
             end
             # add auxiliary variables for variance of each term
-            @defVar(m, varterm[1:nterms])
-            @addConstraint(m, defvar[i=1:nterms], varterm[i] == getStdev(ccexpr.vars[i])*ccexpr.coeffs[i])
-            @defVar(m, slackvar >= 0)
+            @variable(m, varterm[1:nterms])
+            @constraint(m, defvar[i=1:nterms], varterm[i] == getstdev(ccexpr.vars[i])*ccexpr.coeffs[i])
+            @variable(m, slackvar >= 0)
             # conic constraint
-            @addConstraint(m, sum{ varterm[i]^2, i in 1:nterms } <= slackvar^2)
+            @constraint(m, sum{ varterm[i]^2, i in 1:nterms } <= slackvar^2)
             if cc.sense == :(<=)
-                @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} + nu*slackvar + ccexpr.constant <= 0)
+                @constraint(m, sum{getmean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} + nu*slackvar + ccexpr.constant <= 0)
             else
                 @assert cc.sense == :(>=)
-                @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} - nu*slackvar + ccexpr.constant >= 0)
+                @constraint(m, sum{getmean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} - nu*slackvar + ccexpr.constant >= 0)
             end
         end
 
-        @defVar(m, lbvar[1:length(twosidechance)])
-        @defVar(m, ubvar[1:length(twosidechance)])
-        @defVar(m, t[1:length(twosidechance)] ≥ 0)
+        @variable(m, lbvar[1:length(twosidechance)])
+        @variable(m, ubvar[1:length(twosidechance)])
+        @variable(m, t[1:length(twosidechance)] ≥ 0)
         for k in 1:length(twosidechance)
             cc = twosidechance[k]
             ccexpr = cc.ccexpr
@@ -105,37 +104,37 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
             nterms = length(ccexpr.vars)
             coeffs = ccexpr.coeffs
             if all(ex -> isequal(ex, coeffs[1]), coeffs)
-                @addConstraint(m, t[k] >= ccexpr.coeffs[1])
-                @addConstraint(m, t[k] >= -ccexpr.coeffs[1])
-                sumvar = sum([getVariance(ccexpr.vars[i]) for i in 1:nterms])
+                @constraint(m, t[k] >= ccexpr.coeffs[1])
+                @constraint(m, t[k] >= -ccexpr.coeffs[1])
+                sumvar = sum([getvariance(ccexpr.vars[i]) for i in 1:nterms])
                 sqrtsumvar = sqrt(sumvar)
                 ϵ = 1-cc.with_probability
-                @addConstraint(m, lbvar[k] == cc.lb - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
-                @addConstraint(m, ubvar[k] == cc.ub - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
-                @addConstraint(m, lbvar[k] <= Φinv(ϵ)*sqrtsumvar*t[k])
-                @addConstraint(m, ubvar[k] >= Φinv(1-ϵ)*sqrtsumvar*t[k])
+                @constraint(m, lbvar[k] == cc.lb - sum{ getmean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+                @constraint(m, ubvar[k] == cc.ub - sum{ getmean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+                @constraint(m, lbvar[k] <= Φinv(ϵ)*sqrtsumvar*t[k])
+                @constraint(m, ubvar[k] >= Φinv(1-ϵ)*sqrtsumvar*t[k])
                 if cc.approx == "1.25"
-                    @addConstraint(m, ubvar[k] - lbvar[k] >= -2*Φinv(ϵ/2)*sqrtsumvar*t[k])
+                    @constraint(m, ubvar[k] - lbvar[k] >= -2*Φinv(ϵ/2)*sqrtsumvar*t[k])
                 end
                 continue
             end
             
             # add auxiliary variables for variance of each term
-            @defVar(m, varterm[1:nterms])
-            @addConstraint(m, defvar[i=1:nterms], varterm[i] == getStdev(ccexpr.vars[i])*ccexpr.coeffs[i])
+            @variable(m, varterm[1:nterms])
+            @constraint(m, defvar[i=1:nterms], varterm[i] == getstdev(ccexpr.vars[i])*ccexpr.coeffs[i])
             # conic constraint
-            @addConstraint(m, sum{ varterm[i]^2, i in 1:nterms } <= t[k]^2)
+            @constraint(m, sum{ varterm[i]^2, i in 1:nterms } <= t[k]^2)
             ϵ = 1-cc.with_probability
-            @addConstraint(m, lbvar[k] == cc.lb - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
-            @addConstraint(m, ubvar[k] == cc.ub - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+            @constraint(m, lbvar[k] == cc.lb - sum{ getmean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+            @constraint(m, ubvar[k] == cc.ub - sum{ getmean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
             # (lbvar, ubvar, t) ∈ \bar S_ϵ
             # lbvar/t ≤ Φ^{-1}(ϵ)
             # ubvar/t ≥ Φ^{-1}(1-ϵ)
             # ubvar/t - lbvar/t ≥ -2Φ^{-1}(ϵ/2)
-            @addConstraint(m, lbvar[k] ≤ Φinv(ϵ)*t[k])
-            @addConstraint(m, ubvar[k] ≥ Φinv(1-ϵ)*t[k])
+            @constraint(m, lbvar[k] ≤ Φinv(ϵ)*t[k])
+            @constraint(m, ubvar[k] ≥ Φinv(1-ϵ)*t[k])
             if cc.approx == "1.25"
-                @addConstraint(m, ubvar[k] - lbvar[k] ≥ -2*Φinv(ϵ/2)*t[k])
+                @constraint(m, ubvar[k] - lbvar[k] ≥ -2*Φinv(ϵ/2)*t[k])
             end
         end
         #println(m)
@@ -147,8 +146,8 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
         X = Float64[]
         Y = Float64[]
         for k in 1:length(twosidechance)
-            l = getValue(lbvar[k])/getValue(t[k])
-            u = getValue(ubvar[k])/getValue(t[k])
+            l = getvalue(lbvar[k])/getvalue(t[k])
+            u = getvalue(ubvar[k])/getvalue(t[k])
             push!(X,l)
             push!(Y,u)
             println("$k $l $u $(Φ(u) - Φ(l))")
@@ -181,8 +180,8 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
     # set up slack variables for both one sided and two sided chance constraints
     nchanceconstr = length(ccdata.chanceconstr)
     ntwosidechanceconstr = length(ccdata.twosidechanceconstr)
-    @defVar(m, slackvar[1:nchanceconstr] >= 0)
-    @defVar(m, t[1:ntwosidechanceconstr] >= 0)
+    @variable(m, slackvar[1:nchanceconstr] >= 0)
+    @variable(m, t[1:ntwosidechanceconstr] >= 0)
     chancevarterm = Dict()
     twosidechancevarterm = Dict()
     linearizechanceconstr = Int[]
@@ -196,32 +195,32 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
         nu = quantile(Normal(0,1),cc.with_probability)
         coeffs = ccexpr.coeffs
         if all(ex -> isequal(ex, coeffs[1]), coeffs)
-            @addConstraint(m, slackvar[i] >= ccexpr.coeffs[1])
-            @addConstraint(m, slackvar[i] >= -ccexpr.coeffs[1])
-            sumvar = sum([getVariance(ccexpr.vars[i]) for i in 1:nterms])
+            @constraint(m, slackvar[i] >= ccexpr.coeffs[1])
+            @constraint(m, slackvar[i] >= -ccexpr.coeffs[1])
+            sumvar = sum([getvariance(ccexpr.vars[i]) for i in 1:nterms])
             sqrtsumvar = sqrt(sumvar)
             if cc.sense == :(<=)
-                @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} + nu*sqrtsumvar*slackvar[i] + ccexpr.constant <= 0)
+                @constraint(m, sum{getmean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} + nu*sqrtsumvar*slackvar[i] + ccexpr.constant <= 0)
             else
                 @assert cc.sense == :(>=)
-                @addConstraint(m, sum{getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} - nu*sqrtsumvar*slackvar[i] + ccexpr.constant >= 0)
+                @constraint(m, sum{getmean(ccexpr.vars[i])*ccexpr.coeffs[i], i=1:nterms} - nu*sqrtsumvar*slackvar[i] + ccexpr.constant >= 0)
             end
         else
             push!(linearizechanceconstr, i)
             if cc.sense == :(<=)
-                @addConstraint(m, sum{getMean(ccexpr.vars[k])*ccexpr.coeffs[k], k=1:nterms} + nu*slackvar[i] + ccexpr.constant <= 0)
+                @constraint(m, sum{getmean(ccexpr.vars[k])*ccexpr.coeffs[k], k=1:nterms} + nu*slackvar[i] + ccexpr.constant <= 0)
             else
-                @addConstraint(m, sum{getMean(ccexpr.vars[k])*ccexpr.coeffs[k], k=1:nterms} - nu*slackvar[i] + ccexpr.constant >= 0)
+                @constraint(m, sum{getmean(ccexpr.vars[k])*ccexpr.coeffs[k], k=1:nterms} - nu*slackvar[i] + ccexpr.constant >= 0)
             end
             # auxiliary variables
-            @defVar(m, chancevarterm[i][1:nterms])
-            @addConstraint(m, defvar[k=1:nterms], chancevarterm[i][k] == getStdev(ccexpr.vars[k])*ccexpr.coeffs[k])
+            @variable(m, chancevarterm[i][1:nterms])
+            @constraint(m, defvar[k=1:nterms], chancevarterm[i][k] == getstdev(ccexpr.vars[k])*ccexpr.coeffs[k])
         end
     end
     
     # Two sided chance constraints with :Cuts option
-    @defVar(m, lbvar[1:ntwosidechanceconstr])
-    @defVar(m, ubvar[1:ntwosidechanceconstr])
+    @variable(m, lbvar[1:ntwosidechanceconstr])
+    @variable(m, ubvar[1:ntwosidechanceconstr])
 
     for k in 1:ntwosidechanceconstr
         cc = ccdata.twosidechanceconstr[k]
@@ -232,29 +231,29 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
         nterms = length(ccexpr.vars)
         coeffs = ccexpr.coeffs
         if all(ex -> isequal(ex, coeffs[1]), coeffs)
-            @addConstraint(m, t[k] >= ccexpr.coeffs[1])
-            @addConstraint(m, t[k] >= -ccexpr.coeffs[1])
-            sumvar = sum([getVariance(ccexpr.vars[i]) for i in 1:nterms])
+            @constraint(m, t[k] >= ccexpr.coeffs[1])
+            @constraint(m, t[k] >= -ccexpr.coeffs[1])
+            sumvar = sum([getvariance(ccexpr.vars[i]) for i in 1:nterms])
             sqrtsumvar = sqrt(sumvar)
             ϵ = 1-cc.with_probability
-            @addConstraint(m, lbvar[k] == cc.lb - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
-            @addConstraint(m, ubvar[k] == cc.ub - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
-            @addConstraint(m, lbvar[k] <= Φinv(ϵ)*sqrtsumvar*t[k])
-            @addConstraint(m, ubvar[k] >= Φinv(1-ϵ)*sqrtsumvar*t[k])
+            @constraint(m, lbvar[k] == cc.lb - sum{ getmean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+            @constraint(m, ubvar[k] == cc.ub - sum{ getmean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+            @constraint(m, lbvar[k] <= Φinv(ϵ)*sqrtsumvar*t[k])
+            @constraint(m, ubvar[k] >= Φinv(1-ϵ)*sqrtsumvar*t[k])
             if cc.approx == "1.25"
-                @addConstraint(m, ubvar[k] - lbvar[k] >= -2*Φinv(ϵ/2)*sqrtsumvar*t[k])
+                @constraint(m, ubvar[k] - lbvar[k] >= -2*Φinv(ϵ/2)*sqrtsumvar*t[k])
             end
         else
             push!(linearizetwosidechanceconstr, k)
-            @defVar(m, twosidechancevarterm[k][1:nterms])
-            @addConstraint(m, defvar[i=1:nterms], twosidechancevarterm[k][i] == getStdev(ccexpr.vars[i])*ccexpr.coeffs[i])
+            @variable(m, twosidechancevarterm[k][1:nterms])
+            @constraint(m, defvar[i=1:nterms], twosidechancevarterm[k][i] == getstdev(ccexpr.vars[i])*ccexpr.coeffs[i])
             ϵ = 1-cc.with_probability
-            @addConstraint(m, lbvar[k] == cc.lb - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
-            @addConstraint(m, ubvar[k] == cc.ub - sum{ getMean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
-            @addConstraint(m, lbvar[k] ≤ Φinv(ϵ)*t[k])
-            @addConstraint(m, ubvar[k] ≥ Φinv(1-ϵ)*t[k])
+            @constraint(m, lbvar[k] == cc.lb - sum{ getmean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+            @constraint(m, ubvar[k] == cc.ub - sum{ getmean(ccexpr.vars[i])*ccexpr.coeffs[i], i = 1:nterms})
+            @constraint(m, lbvar[k] ≤ Φinv(ϵ)*t[k])
+            @constraint(m, ubvar[k] ≥ Φinv(1-ϵ)*t[k])
             if cc.approx == "1.25"
-                @addConstraint(m, ubvar[k] - lbvar[k] ≥ -2*Φinv(ϵ/2)*t[k])
+                @constraint(m, ubvar[k] - lbvar[k] ≥ -2*Φinv(ϵ/2)*t[k])
             end
         end
     end
@@ -272,9 +271,9 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
         end
         m.objSense == :Min || error("Only minimization is currently supported (this is easy to fix)")
         # qlinterm[i] >= qcoeffs[i]*qvars1[i]^2
-        @defVar(m, qlinterm[1:qterms] >= 0)
+        @variable(m, qlinterm[1:qterms] >= 0)
         # it would help to add some initial linearizations
-        @setObjective(m, m.objSense, quadobj.aff + sum{qlinterm[i], i=1:qterms})
+        @objective(m, m.objSense, quadobj.aff + sum{qlinterm[i], i=1:qterms})
     end
 
     function addcuts(cb)
@@ -291,11 +290,11 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
             ccexpr = cc.ccexpr
             nterms = length(ccexpr.vars)
             for k in 1:nterms
-                exprval = getValue(ccexpr.coeffs[k])
-                mean += getMean(ccexpr.vars[k])*exprval
-                var += getVariance(ccexpr.vars[k])*exprval^2
+                exprval = getvalue(ccexpr.coeffs[k])
+                mean += getmean(ccexpr.vars[k])*exprval
+                var += getvariance(ccexpr.vars[k])*exprval^2
             end
-            mean += getValue(ccexpr.constant)
+            mean += getvalue(ccexpr.constant)
             if var < 1e-10 # corner case, need to handle carefully
                 if cc.sense == :(<=)
                     satisfied_prob = (mean <= 1e-7) ? 1.0 : 0.0
@@ -314,16 +313,16 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
                 continue
             else
                 # check violation of quadratic constraint
-                violation = var - getValue(slackvar[i])^2
+                violation = var - getvalue(slackvar[i])^2
                 debug && println("Violated: $cc")
                 debug && println("$satisfied_prob $mean $var")
                 debug && println("VIOL $violation")
                 nviol += 1
                 # add a linearization
                 if in_callback
-                    @addLazyConstraint(cb, sum{ getValue(chancevarterm[i][k])*chancevarterm[i][k], k in 1:nterms} <= sqrt(var)*slackvar[i])
+                    @lazyconstraint(cb, sum{ getvalue(chancevarterm[i][k])*chancevarterm[i][k], k in 1:nterms} <= sqrt(var)*slackvar[i])
                 else
-                    @addConstraint(m, sum{ getValue(chancevarterm[i][k])*chancevarterm[i][k], k in 1:nterms} <= sqrt(var)*slackvar[i])
+                    @constraint(m, sum{ getvalue(chancevarterm[i][k])*chancevarterm[i][k], k in 1:nterms} <= sqrt(var)*slackvar[i])
                 end
             end
         end
@@ -338,13 +337,13 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
             meanlb = 0.0
             nterms = length(ccexpr.vars)
             for k in 1:nterms
-                exprval = getValue(ccexpr.coeffs[k])
-                mean += getMean(ccexpr.vars[k])*exprval
-                var += getVariance(ccexpr.vars[k])*exprval^2
+                exprval = getvalue(ccexpr.coeffs[k])
+                mean += getmean(ccexpr.vars[k])*exprval
+                var += getvariance(ccexpr.vars[k])*exprval^2
             end
-            mean += getValue(ccexpr.constant)
-            meanlb = mean - getValue(cc.lb)
-            meanub = mean - getValue(cc.ub)
+            mean += getvalue(ccexpr.constant)
+            meanlb = mean - getvalue(cc.lb)
+            meanub = mean - getvalue(cc.ub)
             if var < 1e-10 # corner case, need to handle carefully
                 satisfied_prob_ub = (meanub <= 1e-7) ? 1.0 : 0.0
                 satisfied_prob_lb = (meanlb >= -1e-7) ? 1.0 : 0.0
@@ -357,16 +356,16 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
                 continue
             else
                 # check violation of quadratic constraint
-                violation = var - getValue(t[i])^2
+                violation = var - getvalue(t[i])^2
                 debug && println("Violated: $cc")
                 debug && println("$satisfied_prob $mean $var")
                 debug && println("VIOL $violation")
                 nviol += 1
                 # add a linearization
                 if in_callback
-                    @addLazyConstraint(cb, sum{ getValue(twosidechancevarterm[i][k])*twosidechancevarterm[i][k], k in 1:nterms} <= sqrt(var)*t[i])
+                    @lazyconstraint(cb, sum{ getvalue(twosidechancevarterm[i][k])*twosidechancevarterm[i][k], k in 1:nterms} <= sqrt(var)*t[i])
                 else
-                    @addConstraint(m, sum{ getValue(twosidechancevarterm[i][k])*twosidechancevarterm[i][k], k in 1:nterms} <= sqrt(var)*t[i])
+                    @constraint(m, sum{ getvalue(twosidechancevarterm[i][k])*twosidechancevarterm[i][k], k in 1:nterms} <= sqrt(var)*t[i])
                 end
             end
         end
@@ -375,15 +374,15 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
         if linearize_objective
             # check violated objective linearizations
             for i in 1:qterms
-                qval = quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])^2
-                if getValue(qlinterm[i]) <= qval - objective_linearization_tolerance
-                    debug && println("Linerization violation: ", qval - getValue(qlinterm[i]))
+                qval = quadobj.qcoeffs[i]*getvalue(quadobj.qvars1[i])^2
+                if getvalue(qlinterm[i]) <= qval - objective_linearization_tolerance
+                    debug && println("Linerization violation: ", qval - getvalue(qlinterm[i]))
                     # add another linearization
                     nviol_obj += 1
                     if in_callback
-                        @addLazyConstraint(cb, qlinterm[i] >= -qval + 2*quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])*quadobj.qvars1[i])
+                        @lazyconstraint(cb, qlinterm[i] >= -qval + 2*quadobj.qcoeffs[i]*getvalue(quadobj.qvars1[i])*quadobj.qvars1[i])
                     else
-                        @addConstraint(m, qlinterm[i] >= -qval + 2*quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])*quadobj.qvars1[i])
+                        @constraint(m, qlinterm[i] >= -qval + 2*quadobj.qcoeffs[i]*getvalue(quadobj.qvars1[i])*quadobj.qvars1[i])
                     end
                 end
             end
@@ -395,7 +394,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
     (debug && !do_lazy) && println("Solving deterministic model")
 
     if do_lazy
-        addLazyCallback(m, addcuts, fractional=true)
+        addlazycallback(m, addcuts, fractional=true)
     end
     #tic()
     status = solve(m, suppress_warnings=suppress_warnings, ignore_solve_hook=true)
@@ -453,9 +452,9 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
         end
         m.objSense == :Min || error("Only minimization is currently supported (this is easy to fix)")
         # qlinterm[i] >= qcoeffs[i]*qvars1[i]^2
-        @defVar(m, qlinterm[1:qterms] >= 0)
+        @variable(m, qlinterm[1:qterms] >= 0)
         # it would help to add some initial linearizations
-        @setObjective(m, m.objSense, quadobj.aff + sum{qlinterm[i], i=1:qterms})
+        @objective(m, m.objSense, quadobj.aff + sum{qlinterm[i], i=1:qterms})
     end
 
 
@@ -523,10 +522,10 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
             meanvals = zeros(nterms)
             varvals = zeros(nterms)
             deviation_sign = zeros(nterms)
-            nominal_mean = getValue(ccexpr.constant)
+            nominal_mean = getvalue(ccexpr.constant)
             nominal_var = 0.0
             for k in 1:nterms
-                exprval = getValue(ccexpr.coeffs[k])
+                exprval = getvalue(ccexpr.coeffs[k])
                 #debug && println(ccexpr.coeffs[k], " => ", exprval)
                 idx = ccexpr.vars[k].idx
                 if cc.sense == :(>=) && exprval < 0.0
@@ -581,8 +580,8 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
                     debug && println("nu = $nu")
                     debug && println("Extreme indices (mean) ", sorted_mean_idx[1:cc.uncertainty_budget_mean])
                     debug && println("Extreme indices (var) ", sorted_var_idx[1:cc.uncertainty_budget_variance])
-                    debug && println(ccexpr.constant, " ===> ", getValue(ccexpr.constant))
-                    debug && println(ccexpr.coeffs[1], " ===> ", getValue(ccexpr.coeffs[1]))
+                    debug && println(ccexpr.constant, " ===> ", getvalue(ccexpr.constant))
+                    debug && println(ccexpr.coeffs[1], " ===> ", getvalue(ccexpr.coeffs[1]))
                     debug && println("VIOL ", 100*(cc.with_probability - satisfied_prob), "%")
                     nviol += 1
                     var_coeffs = [vars_nominal[ccexpr.vars[k].idx] for k in 1:nterms]
@@ -595,16 +594,16 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
                     # add a linearization
                     # f(x') + f'(x')(x-x') <= 0
                     if cc.sense == :(<=)
-                        @addConstraint(m, ccexpr.constant + nu*sqrt(worst_var) + 
+                        @constraint(m, ccexpr.constant + nu*sqrt(worst_var) +
                             sum{means_nominal[ccexpr.vars[k].idx]*(ccexpr.coeffs[k]), k=1:nterms} +
-                            sum{sign(getValue(ccexpr.coeffs[sorted_mean_idx[r]]))*means_deviation[ccexpr.vars[sorted_mean_idx[r]].idx]*(ccexpr.coeffs[sorted_mean_idx[r]]), r=1:cc.uncertainty_budget_mean} +
-                            (nu/sqrt(worst_var))*sum{var_coeffs[k]*getValue(ccexpr.coeffs[k])*(ccexpr.coeffs[k]-getValue(ccexpr.coeffs[k])),k=1:nterms}  <= 0)
+                            sum{sign(getvalue(ccexpr.coeffs[sorted_mean_idx[r]]))*means_deviation[ccexpr.vars[sorted_mean_idx[r]].idx]*(ccexpr.coeffs[sorted_mean_idx[r]]), r=1:cc.uncertainty_budget_mean} +
+                            (nu/sqrt(worst_var))*sum{var_coeffs[k]*getvalue(ccexpr.coeffs[k])*(ccexpr.coeffs[k]-getvalue(ccexpr.coeffs[k])),k=1:nterms}  <= 0)
                         debug && println("ADDED: ", m.linconstr[end])
                     else
-                        @addConstraint(m, ccexpr.constant - nu*sqrt(worst_var) + 
+                        @constraint(m, ccexpr.constant - nu*sqrt(worst_var) +
                             sum{means_nominal[ccexpr.vars[k].idx]*(ccexpr.coeffs[k]), k=1:nterms} -
-                            sum{sign(getValue(ccexpr.coeffs[sorted_mean_idx[r]]))*means_deviation[ccexpr.vars[sorted_mean_idx[r]].idx]*(ccexpr.coeffs[sorted_mean_idx[r]]), r=1:cc.uncertainty_budget_mean} -
-                            (nu/sqrt(worst_var))*sum{var_coeffs[k]*getValue(ccexpr.coeffs[k])*(ccexpr.coeffs[k]-getValue(ccexpr.coeffs[k])), k=1:nterms}  >= 0)
+                            sum{sign(getvalue(ccexpr.coeffs[sorted_mean_idx[r]]))*means_deviation[ccexpr.vars[sorted_mean_idx[r]].idx]*(ccexpr.coeffs[sorted_mean_idx[r]]), r=1:cc.uncertainty_budget_mean} -
+                            (nu/sqrt(worst_var))*sum{var_coeffs[k]*getvalue(ccexpr.coeffs[k])*(ccexpr.coeffs[k]-getvalue(ccexpr.coeffs[k])), k=1:nterms}  >= 0)
                         debug && println("ADDED: ", m.linconstr[end])
 
                     end
@@ -617,11 +616,11 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
         nviol_obj = 0
         if linearize_objective
             for i in 1:qterms
-                qval = quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])^2
-                if getValue(qlinterm[i]) <= qval - objective_linearization_tolerance
+                qval = quadobj.qcoeffs[i]*getvalue(quadobj.qvars1[i])^2
+                if getvalue(qlinterm[i]) <= qval - objective_linearization_tolerance
                     # add another linearization
                     nviol_obj += 1
-                    @addConstraint(m, qlinterm[i] >= -qval + 2*quadobj.qcoeffs[i]*getValue(quadobj.qvars1[i])*quadobj.qvars1[i])
+                    @constraint(m, qlinterm[i] >= -qval + 2*quadobj.qcoeffs[i]*getvalue(quadobj.qvars1[i])*quadobj.qvars1[i])
                 end
             end
         end

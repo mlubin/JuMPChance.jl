@@ -4,16 +4,15 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module JuMPChance
 using JuMP
-using Compat
+using Distributions
 import ECOS # For now, set ECOS as default since it's the only open-source conic solver availible
 
 export ChanceModel,
     IndepNormal,
-    affToStr,
-    getMean,
-    getVariance,
-    getStdev,
-    @defIndepNormal
+    getmean,
+    getvariance,
+    getstdev,
+    @indepnormal
 
 # stores extension data inside JuMP Model
 type CCData
@@ -65,44 +64,42 @@ function IndepNormal(m::Model, mean, var, name::AbstractString)
     return IndepNormal(m, ccdata.numRVs)
 end
 
-function getMean(v::IndepNormal)
+function getmean(v::IndepNormal)
     ccdata = getCCData(v.m)
     return ccdata.RVmeans[v.idx]
 end
 
-function getVariance(v::IndepNormal)
+@Base.deprecate getMean getmean
+
+function getvariance(v::IndepNormal)
     ccdata = getCCData(v.m)
     return ccdata.RVvars[v.idx]
 end
 
-getStdev(v::IndepNormal) = sqrt(getVariance(v))
+@Base.deprecate getVariance getvariance
+
+getstdev(v::IndepNormal) = sqrt(getvariance(v))
+
+@Base.deprecate getStdev getstdev
 
 typealias CCAffExpr JuMP.GenericAffExpr{AffExpr,IndepNormal}
 
 CCAffExpr() = CCAffExpr(IndepNormal[],AffExpr[],AffExpr())
-
-Base.print(io::IO, a::CCAffExpr) = print(io, JuMP.affToStr(a))
-Base.show( io::IO, a::CCAffExpr) = print(io, JuMP.affToStr(a))
 
 # affine expression only involving r.v.'s
 typealias RandomAffExpr JuMP.GenericAffExpr{Float64,IndepNormal}
 
 RandomAffExpr() = RandomAffExpr(IndepNormal[],Float64[],0.0)
 
-Base.print(io::IO, a::RandomAffExpr) = print(io, JuMP.affToStr(a))
-Base.show( io::IO, a::RandomAffExpr) = print(io, JuMP.affToStr(a))
-
 Base.promote_rule(::Type{CCAffExpr},::Type{RandomAffExpr}) = CCAffExpr
 Base.promote_rule(::Type{RandomAffExpr},::Type{CCAffExpr}) = CCAffExpr
 
 Base.convert(::Type{CCAffExpr},a::RandomAffExpr) = CCAffExpr(a.vars,[convert(AffExpr,c) for c in a.coeffs],convert(AffExpr,a.constant))
 
-
-
-function JuMP.affToStr(a::CCAffExpr)
+function Base.show(io::IO,a::CCAffExpr)
 
     if length(a.vars) == 0
-        return JuMP.aff_str(JuMP.REPLMode,a.constant)
+        return print(io,a.constant)
     end
     
     m = a.vars[1].m
@@ -113,14 +110,14 @@ function JuMP.affToStr(a::CCAffExpr)
     a = merge_duplicates(a, v, counts, m)
 
     strs = ["($(JuMP.aff_str(JuMP.REPLMode,a.coeffs[i], true)))*$(ccdata.RVnames[a.vars[i].idx])" for i in 1:length(a.vars)]
-    return string(join(strs," + "), " + ", JuMP.aff_str(JuMP.REPLMode, a.constant, true))
+    print(io,string(join(strs," + "), " + ", JuMP.aff_str(JuMP.REPLMode, a.constant, true)))
 end
 
 
-function JuMP.affToStr(a::RandomAffExpr)
+function Base.show(io::IO,a::RandomAffExpr)
 
     if length(a.vars) == 0
-        return string(a.constant)
+        return print(io,a.constant)
     end
     
     m = a.vars[1].m
@@ -130,10 +127,10 @@ function JuMP.affToStr(a::RandomAffExpr)
     a = merge_duplicates(a, v, m)
 
     strs = ["($(a.coeffs[i]))*$(ccdata.RVnames[a.vars[i].idx])" for i in 1:length(a.vars)]
-    return string(join(strs," + "), " + ", string(a.constant))
+    print(io, string(join(strs," + "), " + ", string(a.constant)))
 end
 
-type ChanceConstr <: JuMP.JuMPConstraint
+type ChanceConstr <: JuMP.AbstractConstraint
     ccexpr::CCAffExpr
     sense::Symbol # :(<=) or :(>=), right-hand side assumed to be zero
     with_probability::Float64 # with this probability *or greater*
@@ -143,14 +140,12 @@ end
 
 ChanceConstr(ccexpr::CCAffExpr,sense::Symbol) = ChanceConstr(ccexpr, sense, NaN, 0, 0)
 
-function JuMP.addConstraint(m::Model, constr::ChanceConstr; with_probability::Float64=NaN, uncertainty_budget_mean::Int=0, uncertainty_budget_variance::Int=0)
+function JuMP.addconstraint(m::Model, constr::ChanceConstr; with_probability::Float64=NaN, uncertainty_budget_mean::Int=0, uncertainty_budget_variance::Int=0)
     if !(0 < with_probability < 1)
         error("Must specify with_probability between 0 and 1")
     end
     if with_probability < 0.5
-        Base.warn_once("The meaning of with_probability has flipped! Constraints should be satisfied with given probability or greater. For backwards compatibility, this constraint will be interpreted in the old sense.")
-        with_probability = 1-with_probability
-        constr.sense = (constr.sense == :(>=)) ? :(<=) : :(>=)
+        error("with_proability < 0.5 is not supported")
     end
     constr.with_probability = with_probability
     constr.uncertainty_budget_mean = uncertainty_budget_mean
@@ -158,11 +153,11 @@ function JuMP.addConstraint(m::Model, constr::ChanceConstr; with_probability::Fl
     
     ccdata = getCCData(m)
     push!(ccdata.chanceconstr, constr)
-    return ConstraintRef{ChanceConstr}(m, length(ccdata.chanceconstr))
+    return ConstraintRef{JuMP.Model,ChanceConstr}(m, length(ccdata.chanceconstr))
 
 end
 
-function satisfied_with_probability(r::ConstraintRef{ChanceConstr})
+function satisfied_with_probability(r::ConstraintRef{JuMP.Model,ChanceConstr})
     m = r.m
     ccdata = getCCData(m)
     cc = ccdata.chanceconstr[r.idx]
@@ -173,11 +168,11 @@ function satisfied_with_probability(r::ConstraintRef{ChanceConstr})
     end
 
     nterms = length(cc.ccexpr.vars)
-    μ = getValue(cc.ccexpr.constant)
+    μ = getvalue(cc.ccexpr.constant)
     σ² = 0.0
     for i in 1:nterms
-        μ += getValue(cc.ccexpr.coeffs[i])*getMean(cc.ccexpr.vars[i])
-        σ² += (getStdev(cc.ccexpr.vars[i])*getValue(cc.ccexpr.coeffs[i]))^2
+        μ += getvalue(cc.ccexpr.coeffs[i])*getmean(cc.ccexpr.vars[i])
+        σ² += (getstdev(cc.ccexpr.vars[i])*getvalue(cc.ccexpr.coeffs[i]))^2
     end
     σ = sqrt(σ²)
     d = Normal(μ,σ)
@@ -188,19 +183,16 @@ function satisfied_with_probability(r::ConstraintRef{ChanceConstr})
     end
 end
 
-function JuMP.conToStr(c::ChanceConstr)
-    s = "$(affToStr(c.ccexpr)) $(c.sense) 0"
+function JuMP.show(io::IO,c::ChanceConstr)
+    s = "$(string(c.ccexpr)) $(c.sense) 0"
     if isnan(c.with_probability)
-        return s
+        return print(io,s)
     else
-        return s*", with probability $(c.with_probability)"
+        return print(io,s*", with probability $(c.with_probability)")
     end
 end
 
-Base.print(io::IO, a::ChanceConstr) = print(io, JuMP.conToStr(a))
-Base.show( io::IO, a::ChanceConstr) = print(io, JuMP.conToStr(a))
-
-type TwoSideChanceConstr <: JuMP.JuMPConstraint
+type TwoSideChanceConstr <: JuMP.AbstractConstraint
     ccexpr::CCAffExpr
     lb::AffExpr
     ub::AffExpr
@@ -210,7 +202,7 @@ end
 
 TwoSideChanceConstr(ccexpr::CCAffExpr,lb::AffExpr,ub::AffExpr) = TwoSideChanceConstr(ccexpr, lb, ub, NaN, "none")
 
-function JuMP.addConstraint(m::Model, constr::TwoSideChanceConstr; with_probability::Float64=NaN, approx::AbstractString="")
+function JuMP.addconstraint(m::Model, constr::TwoSideChanceConstr; with_probability::Float64=NaN, approx::AbstractString="")
     if !(0.5 < with_probability < 1)
         error("Must specify with_probability between 1/2 and 1")
     end
@@ -222,36 +214,33 @@ function JuMP.addConstraint(m::Model, constr::TwoSideChanceConstr; with_probabil
 
     ccdata = getCCData(m)
     push!(ccdata.twosidechanceconstr, constr)
-    return ConstraintRef{TwoSideChanceConstr}(m, length(ccdata.twosidechanceconstr))
+    return ConstraintRef{JuMP.Model,TwoSideChanceConstr}(m, length(ccdata.twosidechanceconstr))
 
 end
 
-function JuMP.conToStr(c::TwoSideChanceConstr)
-    s = "$(affToStr(c.lb)) <= $(affToStr(c.ccexpr)) <= $(affToStr(c.ub))"
+function Base.show(io::IO,c::TwoSideChanceConstr)
+    s = "$(string(c.lb)) <= $(string(c.ccexpr)) <= $(string(c.ub))"
     if isnan(c.with_probability)
-        return s
+        return print(io,s)
     else
-        return s*", with probability $(c.with_probability)"
+        return print(io,s*", with probability $(c.with_probability)")
     end
 end
 
-Base.print(io::IO, a::TwoSideChanceConstr) = print(io, JuMP.conToStr(a))
-Base.show( io::IO, a::TwoSideChanceConstr) = print(io, JuMP.conToStr(a))
-
-function satisfied_with_probability(r::ConstraintRef{TwoSideChanceConstr})
+function satisfied_with_probability(r::ConstraintRef{JuMP.Model,TwoSideChanceConstr})
     m = r.m
     ccdata = getCCData(m)
     cc = ccdata.twosidechanceconstr[r.idx]
 
     nterms = length(cc.ccexpr.vars)
-    μ = getValue(cc.ccexpr.constant)
+    μ = getvalue(cc.ccexpr.constant)
     σ² = 0.0
     for i in 1:nterms
-        μ += getValue(cc.ccexpr.coeffs[i])*getMean(cc.ccexpr.vars[i])
-        σ² += (getStdev(cc.ccexpr.vars[i])*getValue(cc.ccexpr.coeffs[i]))^2
+        μ += getvalue(cc.ccexpr.coeffs[i])*getmean(cc.ccexpr.vars[i])
+        σ² += (getstdev(cc.ccexpr.vars[i])*getvalue(cc.ccexpr.coeffs[i]))^2
     end
     σ = sqrt(σ²)
-    return cdf(Normal(μ,σ), getValue(cc.ub)) - cdf(Normal(μ,σ), getValue(cc.lb))
+    return cdf(Normal(μ,σ), getvalue(cc.ub)) - cdf(Normal(μ,σ), getvalue(cc.lb))
 
 end
 
