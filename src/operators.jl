@@ -18,9 +18,9 @@ for op in (:+, :-, :*)
     end
     if op == :-
         @eval ($op)(lhs::CCAffExpr, rhs::Variable) = (+)(lhs,-rhs)
-        @eval @compat ($op)(lhs::IndepNormal, rhs::Union{Variable,Number}) = (+)(lhs,-rhs)
+        @eval ($op)(lhs::IndepNormal, rhs::Union{Variable,Number}) = (+)(lhs,-rhs)
     else
-        @eval @compat ($op)(lhs::IndepNormal, rhs::Union{Variable,Number}) = ($op)(rhs,lhs)
+        @eval ($op)(lhs::IndepNormal, rhs::Union{Variable,Number}) = ($op)(rhs,lhs)
         @eval ($op)(lhs::CCAffExpr, rhs::Variable) = ($op)(rhs,lhs)
     end
 end
@@ -54,18 +54,6 @@ Base.convert(::Type{CCAffExpr},a::AffExpr) = CCAffExpr(IndepNormal[],AffExpr[],a
 
 # CCAffExpr--CCAffExpr
 # handled by GenericAffExpr fallback
-
-# comparison operators
-function (<=)(lhs::CCAffExpr, rhs::Number)
-    Base.warn_once("The comparison operator <= has been deprecated for constructing chance constraints. Use the form @addConstraint instead.")
-    ChanceConstr(lhs-rhs, :(<=))
-end
-
-function (>=)(lhs::CCAffExpr, rhs::Number)
-    Base.warn_once("The comparison operator >= has been deprecated for constructing chance constraints. Use the form @addConstraint instead.")
-    ChanceConstr(lhs-rhs, :(>=))
-end
-# == not valid
 
 # RandomAffExpr
 # RandomAffExpr--Variable

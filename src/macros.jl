@@ -2,7 +2,7 @@ using Base.Meta
 
 import JuMP.@gendict
 
-macro defIndepNormal(m, x, mean, var)
+macro indepnormal(m, x, mean, var)
     m = esc(m)
     @assert isexpr(mean,:kw) && mean.args[1] == :mean
     @assert isexpr(var,:kw) && var.args[1] == :var
@@ -39,6 +39,12 @@ macro defIndepNormal(m, x, mean, var)
         end
     end
 end
+
+macro defIndepNormal(m, x, mean, var)
+    Base.warn_once("@defIndepNormal is deprecated. Use @indepnormal instead")
+    return :(@indepnormal($(esc(m)),$(esc(x)),$(esc(mean)),$(esc(var))))
+end
+export @defIndepNormal
 
 # Extensions to make JuMP macros work with chance constraints
 

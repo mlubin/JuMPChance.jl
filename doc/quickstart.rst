@@ -33,17 +33,17 @@ Defining variables
 ^^^^^^^^^^^^^^^^^^
 
 In JuMPChance, you can mix decision variables and random variables in expressions.
-Decision variables are declared by using JuMP's ``@defVar`` syntax.
+Decision variables are declared by using JuMP's ``@variable`` syntax.
 Random variables are declared by using a similar syntax::
 
-    @defIndepNormal(m, x, mean=0, var=1)
+    @indepnormal(m, x, mean=0, var=1)
 
 creates a single independent normal random variable with the specified
 mean and variance. The ``mean`` and ``var`` arguments are always
 required. Variables indexed over a given set are supported,
 and the means and variances may depend on the given indices. For example::
 
-    @defIndepNormal(m, x[i=1:N,j=1:M], mean=i*j, var = 2j^2)
+    @indepnormal(m, x[i=1:N,j=1:M], mean=i*j, var = 2j^2)
 
 creates an ``N`` by ``M`` matrix of independent normally distributed
 random variables where the variable in index ``(i,j)`` has mean ``i*j``
@@ -52,7 +52,7 @@ and variance ``2j^2``.
 Index sets do not need to be ranges; they may be arbitrary Julia lists::
 
     S = [:cat, :dog]
-    @defIndepNormal(m, x[S], mean=0, var=1)
+    @indepnormal(m, x[S], mean=0, var=1)
 
 defines two variables ``x[:cat]`` and ``x[:dog]``.
 
@@ -83,12 +83,12 @@ and
 
 where :math:`x` are the decision variables, :math:`c_i` are coefficient vectors, :math:`d_i` and :math:`b` are scalars, :math:`z_i` are independent jointly normal random variables with provided means and variances for :math:`i=1,\ldots,k`, and :math:`\epsilon \in (0,1)`.
 
-Chance constraints of the above form are added by using the ``@addConstraint`` macro. For example::
+Chance constraints of the above form are added by using the ``@constraint`` macro. For example::
 
-    @defIndepNormal(m, x, mean=0,var=1)
-    @defVar(m, z)
+    @indepnormal(m, x, mean=0,var=1)
+    @variable(m, z)
 
-    @addConstraint(m, z*x >= -1, with_probability=0.95)
+    @constraint(m, z*x >= -1, with_probability=0.95)
 
 Adds the constraint :math:`P(z*x \geq -1) \geq 0.95`. Note that the ``with_probability`` argument specifies the *minimum* probability :math:`\epsilon` with which the constraint may be satisfied, and so should be a number close to 1.
 
@@ -100,7 +100,7 @@ One may also specify normally distributed random variables whose parameters
 (mean and variance) are uncertain, that is, known to fall within a certain interval.
 These random variables with uncertain distribution are declared as follows::
 
-    @defIndepNormal(m, x, mean=(-1,1), var=(20,30))
+    @indepnormal(m, x, mean=(-1,1), var=(20,30))
 
 Any combination of the mean, variance, or both may be uncertain.
 When these variables appear in constraints, the constraint is
@@ -124,9 +124,9 @@ Currently JuMPChance supports only the following uncertainty sets on the means a
 
 where :math:`\Gamma_\mu` and :math:`\Gamma_\sigma` and given (integer) constants, known as the uncertainty budgets. The interpretation of these sets is that at most :math:`\Gamma` out of :math:`k` uncertain parameters are allows to vary from their nominal values :math:`\hat\mu_i` and :math:`\hat\sigma_i^2`. This is the uncertainty set proposed by Bertsimas and Sim (2004). Note that the means and variances are allowed to vary independently.
 
-The uncertainty budgets :math:`\Gamma_\mu` and :math:`\Gamma_\sigma` are specified as parameters to ``@addConstraint`` as follows::
+The uncertainty budgets :math:`\Gamma_\mu` and :math:`\Gamma_\sigma` are specified as parameters to ``@constraint`` as follows::
 
-    @addConstraint(m, z*x >= -1, with_probability=0.95,
+    @constraint(m, z*x >= -1, with_probability=0.95,
         uncertainty_budget_mean=1, uncertainty_budget_variance=1)
 
 Solving the model
@@ -154,5 +154,5 @@ to confirm that the model was successfully solved to optimality, for example::
     end
 
 Optimal values of the decision variables are available by using
-``getValue``, as with JuMP.
+``getvalue``, as with JuMP.
 
