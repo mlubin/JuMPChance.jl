@@ -1,6 +1,6 @@
 # extensions to JuMP for (robust) chance constraints
 
-isdefined(Base, :__precompile__) && __precompile__()
+__precompile__()
 
 module JuMPChance
 using JuMP
