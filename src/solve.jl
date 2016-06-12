@@ -103,7 +103,11 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
             ccexpr.constant = AffExpr()
             nterms = length(ccexpr.vars)
             coeffs = ccexpr.coeffs
-            if all(ex -> isequal(ex, coeffs[1]), coeffs)
+            if nterms == 0
+                # actually not a chance constraint
+                @constraint(m, cc.lb ≤ 0)
+                @constraint(m, cc.ub ≥ 0)
+            elseif all(ex -> isequal(ex, coeffs[1]), coeffs)
                 @constraint(m, t[k] >= ccexpr.coeffs[1])
                 @constraint(m, t[k] >= -ccexpr.coeffs[1])
                 sumvar = sum([getvariance(ccexpr.vars[i]) for i in 1:nterms])

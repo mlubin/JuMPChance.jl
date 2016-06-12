@@ -183,11 +183,9 @@ facts("Printing two-sided constraints") do
     @fact string(cc.twosidechanceconstr[end]) --> "-1 <= (x)*ξ + 0 <= 1, with probability 0.95"
     @constraint(m, -1 ≤ x*ξ ≤ x, with_probability = 0.95, approx="1.25")
     @fact string(cc.twosidechanceconstr[end]) --> "-1 <= (x)*ξ + 0 <= x, with probability 0.95"
-    if VERSION > v"0.4-"
-        @variable(m,y[1:3])
-        @constraint(m, -1 ≤ x*ξ ≤ sum{y[i],i=1:3}, with_probability = 0.95, approx="1.25")
-        @fact string(cc.twosidechanceconstr[end]) --> "-1 <= (x)*ξ + 0 <= y[1] + y[2] + y[3], with probability 0.95"
-    end
+    @variable(m,y[1:3])
+    @constraint(m, -1 ≤ x*ξ ≤ sum{y[i],i=1:3}, with_probability = 0.95, approx="1.25")
+    @fact string(cc.twosidechanceconstr[end]) --> "-1 <= (x)*ξ + 0 <= y[1] + y[2] + y[3], with probability 0.95"
 end
 
 facts("Basic chance constraint model") do
@@ -812,6 +810,21 @@ facts("Basic two-sided constraints") do
             @fact violation ≤ prob_guarantee*ϵ + 1e-5 --> true
         end
     end
+end
+
+facts("Empty two-sided constraints") do
+
+    m = ChanceModel()
+    @indepnormal(m, ξ, mean=0, var=1)
+    @variable(m, x)
+    @variable(m, u)
+
+    @objective(m, Max, x)
+    ex = zero(JuMPChance.CCAffExpr) + x
+    @constraint(m, -1 ≤ ex ≤ 1, with_probability=0.95, approx="1.25")
+    solve(m, method=:Reformulate)
+    @fact getvalue(x) --> roughly(1.0, 1e-5)
+
 end
 
 FactCheck.exitstatus()
