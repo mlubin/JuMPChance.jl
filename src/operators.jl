@@ -41,6 +41,7 @@ end
 (-)(lhs::AffExpr,rhs::CCAffExpr) = convert(CCAffExpr,lhs)-rhs
 (-)(lhs::CCAffExpr,rhs::AffExpr) = lhs-convert(CCAffExpr,rhs)
 Base.promote_rule(::Type{AffExpr},::Type{CCAffExpr}) = CCAffExpr
+Base.promote_rule(::Type{Float64},::Type{CCAffExpr}) = CCAffExpr
 Base.convert(::Type{CCAffExpr},a::AffExpr) = CCAffExpr(IndepNormal[],AffExpr[],a)
 
 # AffExpr--RandomAffExpr
