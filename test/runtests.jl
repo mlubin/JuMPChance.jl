@@ -827,4 +827,15 @@ facts("Empty two-sided constraints") do
 
 end
 
+facts("JuMP macro corner case") do
+    m = ChanceModel()
+
+    @variable(m, x)
+    @indepnormal(m, ξ, mean = 0, var = 1)
+
+    @expression(m, ex, (x+1)*(2ξ))
+    @fact string(ex) --> "(2 x + 2)*ξ + 0"
+
+end
+
 FactCheck.exitstatus()
