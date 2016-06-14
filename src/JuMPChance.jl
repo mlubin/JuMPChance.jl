@@ -50,6 +50,8 @@ type IndepNormal <: JuMP.AbstractJuMPScalar
     idx::Int
 end
 
+JuMP.linearindex(v::IndepNormal) = v.idx
+
 function IndepNormal(m::Model, mean, var, name::AbstractString)
     ccdata = getCCData(m)
     ccdata.numRVs += 1
