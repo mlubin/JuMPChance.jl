@@ -1,7 +1,5 @@
 using Base.Meta
 
-import JuMP.@gendict
-
 macro indepnormal(m, x, mean, var)
     m = esc(m)
     @assert isexpr(mean,:kw) && mean.args[1] == :mean
@@ -20,8 +18,10 @@ macro indepnormal(m, x, mean, var)
             error("Syntax error: Expected $var to be of form var[...]")
         end
 
-        refcall, idxvars, idxsets, idxpairs, condition = JuMP.buildrefsets(x)
+        variable = gensym()
+        refcall, idxvars, idxsets, idxpairs, condition = JuMP.buildrefsets(x, variable)
         varname = JuMP.getname(x)
+        escvarname = esc(varname)
 
         varstr = :(string($(string(varname)),"["))
         for idxvar in idxvars
@@ -32,10 +32,10 @@ macro indepnormal(m, x, mean, var)
         push!(varstr.args,"]")
 
         code = :( $(refcall) = IndepNormal($m, $mean, $var, $varstr ) )
-        looped = JuMP.getloopedcode(x, code, condition, idxvars, idxsets, idxpairs, :IndepNormal)
+        looped = JuMP.getloopedcode(variable, code, condition, idxvars, idxsets, idxpairs, :IndepNormal)
         return quote
             $looped
-            $(esc(varname))
+            $escvarname = $variable
         end
     end
 end
