@@ -64,7 +64,15 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
             nterms = length(ccexpr.vars)
             # case when reformulation results in a linear constraint
             coeffs = ccexpr.coeffs
-            if all(ex -> isequal(ex, coeffs[1]), coeffs)
+            if nterms == 0
+                # actually not a chance constraint
+                if cc.sense == :(<=)
+                    @constraint(m, ccexpr.constant <= 0)
+                else
+                    @constraint(m, ccexpr.constate >= 0)
+                end
+                continue
+            elseif all(ex -> isequal(ex, coeffs[1]), coeffs)
                 @variable(m, slackvar >= 0)
                 @constraint(m, slackvar >= ccexpr.coeffs[1])
                 @constraint(m, slackvar >= -ccexpr.coeffs[1])

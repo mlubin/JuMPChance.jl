@@ -812,7 +812,7 @@ facts("Basic two-sided constraints") do
     end
 end
 
-facts("Empty two-sided constraints") do
+facts("Empty constraints") do
 
     m = ChanceModel()
     @indepnormal(m, ξ, mean=0, var=1)
@@ -824,6 +824,17 @@ facts("Empty two-sided constraints") do
     @constraint(m, -1 ≤ ex ≤ 1, with_probability=0.95, approx="1.25")
     solve(m, method=:Reformulate)
     @fact getvalue(x) --> roughly(1.0, 1e-5)
+
+    m = ChanceModel()
+    @indepnormal(m, ξ, mean=0, var=1)
+    @variable(m, x)
+    @variable(m, u)
+
+    @objective(m, Max, x)
+    ex = zero(JuMPChance.CCAffExpr) + x
+    @constraint(m, ex ≤ 0.5, with_probability=0.95)
+    solve(m, method=:Reformulate)
+    @fact getvalue(x) --> roughly(0.5, 1e-5)
 
 end
 
