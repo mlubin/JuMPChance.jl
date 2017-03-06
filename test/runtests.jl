@@ -184,7 +184,7 @@ facts("Printing two-sided constraints") do
     @constraint(m, -1 ≤ x*ξ ≤ x, with_probability = 0.95, approx="1.25")
     @fact string(cc.twosidechanceconstr[end]) --> "-1 <= (x)*ξ + 0 <= x, with probability 0.95"
     @variable(m,y[1:3])
-    @constraint(m, -1 ≤ x*ξ ≤ sum{y[i],i=1:3}, with_probability = 0.95, approx="1.25")
+    @constraint(m, -1 ≤ x*ξ ≤ sum(y[i] for i=1:3), with_probability = 0.95, approx="1.25")
     @fact string(cc.twosidechanceconstr[end]) --> "-1 <= (x)*ξ + 0 <= y[1] + y[2] + y[3], with probability 0.95"
 end
 
@@ -438,7 +438,7 @@ facts("Integer variables") do
     @variable(m, z >= -100, Int)
     @objective(m, Min, z)
 
-    @constraint(m, z*x + sum{y,i=1:1} >= -1, with_probability=0.95, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
+    @constraint(m, z*x + sum(y for i=1:1) >= -1, with_probability=0.95, uncertainty_budget_mean=1, uncertainty_budget_variance=1)
     status = solve(m, method=:Cuts,silent=true)
     @fact status --> :Optimal
     @fact getvalue(z) --> roughly(0.0,1e-5)
@@ -510,7 +510,7 @@ facts("Special cases where chance constraint becomes linear") do
 
         @objective(m, Max, z)
         @constraint(m, y[1] == y[2])
-        @constraint(m, z + sum{x[i]*y[i], i=1:2} <= 20, with_probability=0.95)
+        @constraint(m, z + sum(x[i]*y[i] for i=1:2) <= 20, with_probability=0.95)
 
 
         status = solve(m, method=method, silent=true)
@@ -525,7 +525,7 @@ facts("Special cases where chance constraint becomes linear") do
 
         @objective(m, Min, z)
         @constraint(m, y[1] == y[2])
-        @constraint(m, z + sum{x[i]*y[i], i=1:2} >= 200, with_probability=0.95)
+        @constraint(m, z + sum(x[i]*y[i] for i=1:2) >= 200, with_probability=0.95)
 
         status = solve(m, method=method, silent=true)
         @fact status --> :Optimal
@@ -560,7 +560,7 @@ facts("Compare with manual reformulation") do
         @constraint(m, x[2] >= 2)
         @constraint(m, defvar[i=1:2], varterm[i] == sqrt(σ²)*x[i])
         @constraint(m, x[2] + nu*t <= z)
-        @constraint(m, sum{ varterm[i]^2, i=1:2} <= t^2)
+        @constraint(m, sum( varterm[i]^2 for i=1:2) <= t^2)
         @objective(m, Min, z)
         
         status = solve(m)
@@ -640,7 +640,7 @@ facts("Two-sided constraints vs. two one-sided constraints") do
         @variable(m, u)
         @variable(m, x[1:4])
         @constraint(m, xcons[i=1:4], x[i] == 1)
-        @constraint(m, l <= sum{x[i]*ω[i], i=1:4} <= u, with_probability=1-ϵ, approx="2.0")
+        @constraint(m, l <= sum(x[i]*ω[i] for i=1:4) <= u, with_probability=1-ϵ, approx="2.0")
         @objective(m, Min, u-2l)
 
         solve(m, method=method, silent=true)
@@ -653,8 +653,8 @@ facts("Two-sided constraints vs. two one-sided constraints") do
         @variable(m, u)
         @variable(m, x[1:4])
         @constraint(m, xcons[i=1:4], x[i] == 1)
-        @constraint(m, sum{x[i]*ω[i], i=1:4}>= l, with_probability=1-ϵ)
-        @constraint(m, sum{x[i]*ω[i], i=1:4} <= u, with_probability=1-ϵ)
+        @constraint(m, sum(x[i]*ω[i] for i=1:4)>= l, with_probability=1-ϵ)
+        @constraint(m, sum(x[i]*ω[i] for i=1:4) <= u, with_probability=1-ϵ)
         @objective(m, Min, u-2l)
 
         solve(m, method=method, silent=true)
@@ -671,7 +671,7 @@ facts("Two-sided constraints vs. two one-sided constraints") do
         @variable(m, u)
         @variable(m, x[1:4])
         @constraint(m, xcons[i=1:4], x[i] == i)
-        @constraint(m, l <= sum{i*x[i]*ω[i], i=1:4} <= u, with_probability=1-ϵ, approx="2.0")
+        @constraint(m, l <= sum(i*x[i]*ω[i] for i=1:4) <= u, with_probability=1-ϵ, approx="2.0")
         @objective(m, Min, u-2l)
 
         solve(m, method=method, silent=true)
@@ -684,8 +684,8 @@ facts("Two-sided constraints vs. two one-sided constraints") do
         @variable(m, u)
         @variable(m, x[1:4])
         @constraint(m, xcons[i=1:4], x[i] == i)
-        @constraint(m, sum{i*x[i]*ω[i], i=1:4}>= l, with_probability=1-ϵ)
-        @constraint(m, sum{i*x[i]*ω[i], i=1:4} <= u, with_probability=1-ϵ)
+        @constraint(m, sum(i*x[i]*ω[i] for i=1:4) >= l, with_probability=1-ϵ)
+        @constraint(m, sum(i*x[i]*ω[i] for i=1:4) <= u, with_probability=1-ϵ)
         @objective(m, Min, u-2l)
 
         solve(m, method=method, silent=true)
@@ -702,7 +702,7 @@ facts("Two-sided constraints vs. two one-sided constraints") do
         @variable(m, u)
         @variable(m, x[1:4])
         @constraint(m, xcons[i=1:4], x[i] == i)
-        @constraint(m, l <= sum{i*x[i]*ω[i], i=1:4} <= u, with_probability=1-ϵ, approx="2.0")
+        @constraint(m, l <= sum(i*x[i]*ω[i] for i=1:4) <= u, with_probability=1-ϵ, approx="2.0")
         @objective(m, Min, u-2l)
 
         solve(m, method=method, silent=true)
@@ -715,8 +715,8 @@ facts("Two-sided constraints vs. two one-sided constraints") do
         @variable(m, u)
         @variable(m, x[1:4])
         @constraint(m, xcons[i=1:4], x[i] == i)
-        @constraint(m, sum{i*x[i]*ω[i], i=1:4}>= l, with_probability=1-ϵ)
-        @constraint(m, sum{i*x[i]*ω[i], i=1:4} <= u, with_probability=1-ϵ)
+        @constraint(m, sum(i*x[i]*ω[i] for i=1:4) >= l, with_probability=1-ϵ)
+        @constraint(m, sum(i*x[i]*ω[i] for i=1:4) <= u, with_probability=1-ϵ)
         @objective(m, Min, u-2l)
 
         solve(m, method=method, silent=true)
