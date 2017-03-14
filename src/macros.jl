@@ -2,8 +2,9 @@ using Base.Meta
 
 macro indepnormal(m, x, mean, var)
     m = esc(m)
-    @assert isexpr(mean,:kw) && mean.args[1] == :mean
-    @assert isexpr(var,:kw) && var.args[1] == :var
+    kwsymbol = VERSION < v"0.6.0-dev.1934" ? :kw : :(=) # changed by julia PR #19868
+    @assert isexpr(mean,kwsymbol) && mean.args[1] == :mean
+    @assert isexpr(var,kwsymbol) && var.args[1] == :var
     mean = esc(mean.args[2])
     var = esc(var.args[2])
 

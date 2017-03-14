@@ -84,12 +84,12 @@ getstdev(v::IndepNormal) = sqrt(getvariance(v))
 
 @Base.deprecate getStdev getstdev
 
-typealias CCAffExpr JuMP.GenericAffExpr{AffExpr,IndepNormal}
+const CCAffExpr = JuMP.GenericAffExpr{AffExpr,IndepNormal}
 
 CCAffExpr() = CCAffExpr(IndepNormal[],AffExpr[],AffExpr())
 
 # affine expression only involving r.v.'s
-typealias RandomAffExpr JuMP.GenericAffExpr{Float64,IndepNormal}
+const RandomAffExpr = JuMP.GenericAffExpr{Float64,IndepNormal}
 
 RandomAffExpr() = RandomAffExpr(IndepNormal[],Float64[],0.0)
 
