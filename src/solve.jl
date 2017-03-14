@@ -721,7 +721,7 @@ function merge_duplicates{CoefType <: JuMP.GenericAffExpr}(aff::JuMP.GenericAffE
     # do a first pass to precompute sizes
     for ind in 1:length(aff.coeffs)
         var = aff.vars[ind]
-        is(var.m, m) || error("Variable does not belong to this model")
+        var.m === m || error("Variable does not belong to this model")
         addelt!(counts, aff.vars[ind].idx, length(aff.coeffs[ind].vars))
     end
     for k in 1:counts.nnz
@@ -734,8 +734,8 @@ function merge_duplicates{CoefType <: JuMP.GenericAffExpr}(aff::JuMP.GenericAffE
     for ind in 1:length(aff.coeffs)
         addelt!(v, aff.vars[ind].idx, aff.coeffs[ind])
     end
-    vars = Array(IndepNormal,v.nnz)
-    coeffs = Array(CoefType,v.nnz)
+    vars = Array{IndepNormal}(v.nnz)
+    coeffs = Array{CoefType}(v.nnz)
     for i in 1:v.nnz
         idx = v.nzidx[i]
         vars[i] = IndepNormal(m,idx)
@@ -757,8 +757,8 @@ function merge_duplicates{CoefType <: Number}(aff::JuMP.GenericAffExpr{CoefType,
         is(var.m, m) || error("Variable does not belong to this model")
         addelt!(v, aff.vars[ind].idx, aff.coeffs[ind])
     end
-    vars = Array(IndepNormal,v.nnz)
-    coeffs = Array(CoefType,v.nnz)
+    vars = Array{IndepNormal}(v.nnz)
+    coeffs = Array{CoefType}(v.nnz)
     for i in 1:v.nnz
         idx = v.nzidx[i]
         vars[i] = IndepNormal(m,idx)
