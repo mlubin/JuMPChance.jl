@@ -1,0 +1,23 @@
+name = "JuMPChance"
+uuid = "bbd82366-0c69-5eef-bed9-5a0dd17fc720"
+
+[deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+ECOS = "e2685f51-7e38-5353-a97d-a921fd2c8199"
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+MathProgBase = "fdba3010-5040-5b88-9595-932c9decdf73"
+
+[compat]
+Distributions = "0.21"
+ECOS = "0.10"
+JuMP = "0.18"
+MathProgBase = "0.7.7"
+julia = "1"
+
+[extras]
+GLPKMathProgInterface = "3c7084bd-78ad-589a-b5bb-dbd673274bea"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["GLPKMathProgInterface", "Random", "Test"]

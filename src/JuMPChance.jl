@@ -15,7 +15,7 @@ export ChanceModel,
     @indepnormal
 
 # stores extension data inside JuMP Model
-type CCData
+mutable struct CCData
     # pure chance constraints
     chanceconstr
     # robust chance constraints
@@ -45,7 +45,7 @@ end
 
 
 # pointer back to JuMP model and r.v. index
-type IndepNormal <: JuMP.AbstractJuMPScalar
+mutable struct IndepNormal <: JuMP.AbstractJuMPScalar
     m::Model
     idx::Int
 end
@@ -71,18 +71,12 @@ function getmean(v::IndepNormal)
     return ccdata.RVmeans[v.idx]
 end
 
-@Base.deprecate getMean getmean
-
 function getvariance(v::IndepNormal)
     ccdata = getCCData(v.m)
     return ccdata.RVvars[v.idx]
 end
 
-@Base.deprecate getVariance getvariance
-
 getstdev(v::IndepNormal) = sqrt(getvariance(v))
-
-@Base.deprecate getStdev getstdev
 
 const CCAffExpr = JuMP.GenericAffExpr{AffExpr,IndepNormal}
 
@@ -132,7 +126,7 @@ function Base.show(io::IO,a::RandomAffExpr)
     print(io, string(join(strs," + "), " + ", string(a.constant)))
 end
 
-type ChanceConstr <: JuMP.AbstractConstraint
+mutable struct ChanceConstr <: JuMP.AbstractConstraint
     ccexpr::CCAffExpr
     sense::Symbol # :(<=) or :(>=), right-hand side assumed to be zero
     with_probability::Float64 # with this probability *or greater*
@@ -194,7 +188,7 @@ function JuMP.show(io::IO,c::ChanceConstr)
     end
 end
 
-type TwoSideChanceConstr <: JuMP.AbstractConstraint
+mutable struct TwoSideChanceConstr <: JuMP.AbstractConstraint
     ccexpr::CCAffExpr
     lb::AffExpr
     ub::AffExpr

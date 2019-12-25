@@ -1,17 +1,15 @@
 language: julia
+coveralls: true
 os:
     - linux
 julia:
-    - 0.5
-    - nightly
+    - 1.0
+    - 1.1
+    - 1.2
+    - 1.3
 notifications:
     email: false
 sudo: false
 addons:
     apt_packages:
         - libgmp-dev
-script:
-    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-    - julia --check-bounds=yes -e 'Pkg.init(); Pkg.add("JuMP"); Pkg.clone(pwd()); Pkg.build("JuMPChance"); Pkg.test("JuMPChance"; coverage=true)'
-after_success:
-    - julia -e 'cd(Pkg.dir("JuMPChance")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
