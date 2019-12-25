@@ -130,7 +130,7 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
                 end
                 continue
             end
-            
+
             # add auxiliary variables for variance of each term
             varterm = @variable(m, [1:nterms])
             defvar = @constraint(m, [i=1:nterms], varterm[i] == getstdev(ccexpr.vars[i])*ccexpr.coeffs[i])
@@ -198,7 +198,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
     twosidechancevarterm = Dict()
     linearizechanceconstr = Int[]
     linearizetwosidechanceconstr = Int[]
-    
+
     # one sided chance constraints case
     for i in 1:nchanceconstr
         cc = ccdata.chanceconstr[i]
@@ -229,7 +229,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
             defvar = @constraint(m, [k=1:nterms], chancevarterm[i][k] == getstdev(ccexpr.vars[k])*ccexpr.coeffs[k])
         end
     end
-    
+
     # Two sided chance constraints with :Cuts option
     lbvar = @variable(m, [1:ntwosidechanceconstr])
     ubvar = @variable(m, [1:ntwosidechanceconstr])
@@ -293,7 +293,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
 
         nviol = 0
         nviol_obj = 0
-        
+
         # check violated chance constraints
         for i in linearizechanceconstr
             cc::ChanceConstr = ccdata.chanceconstr[i]
@@ -338,7 +338,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
                 end
             end
         end
-        
+
         # check violated two sided chance constraint
         for i in linearizetwosidechanceconstr
             cc::TwoSideChanceConstr = ccdata.twosidechanceconstr[i]
@@ -401,7 +401,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
         end
         return nviol, nviol_obj
     end
-    
+
     do_lazy = has_integers && lazy_constraints
     (debug && !do_lazy) && println("Solving deterministic model")
 
@@ -415,7 +415,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
         #toc()
         return status
     end
-    
+
     if status != :Optimal
         return status
     end
@@ -425,7 +425,7 @@ function solvecc_cuts(m::Model, suppress_warnings::Bool, probability_tolerance::
     while niter < iteration_limit
 
         nviol, nviol_obj = addcuts(nothing)
- 
+
         if nviol == 0 && nviol_obj == 0
             silent || println("Done after $niter iterations")
             #toc()
@@ -511,11 +511,11 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
     debug && println("Variance deviations: ", vars_deviation)
 
     # TODO: special handling for quadratic objectives
-    
+
     debug && println("Solving deterministic model")
 
     status = solve(m, suppress_warnings=suppress_warnings, ignore_solve_hook=true)
-    
+
     if status != :Optimal
         return status
     end
@@ -656,14 +656,14 @@ function solverobustcc_cuts(m::Model, suppress_warnings::Bool, probability_toler
 end
 
 # We can remove the code for IndexedVector once JuMP issue #340 is resolved.
-type IndexedVector{T}
+mutable struct IndexedVector{T}
     elts::Vector{T}
     nzidx::Vector{Int}
     nnz::Int
     empty::BitArray{1}
 end
 
-IndexedVector{T}(::Type{T},n::Integer) = IndexedVector(zeros(T,n),zeros(Int,n),0,trues(n))
+IndexedVector(::Type{T},n::Integer) where {T} = IndexedVector(zeros(T,n),zeros(Int,n),0,trues(n))
 
 function addelt!(v::IndexedVector{AffExpr},i::Integer,val::AffExpr)
     if v.empty[i]  # new index
@@ -676,7 +676,7 @@ function addelt!(v::IndexedVector{AffExpr},i::Integer,val::AffExpr)
     return nothing
 end
 
-function addelt!{T}(v::IndexedVector{T},i::Integer,val::T)
+function addelt!(v::IndexedVector{T},i::Integer,val::T) where {T}
     if v.empty[i]  # new index
         v.elts[i] = val
         v.nzidx[v.nnz += 1] = i
@@ -687,7 +687,7 @@ function addelt!{T}(v::IndexedVector{T},i::Integer,val::T)
     return nothing
 end
 
-function Base.empty!{T}(v::IndexedVector{T})
+function Base.empty!(v::IndexedVector{T}) where {T}
     elts = v.elts
     nzidx = v.nzidx
     empty = v.empty
@@ -713,7 +713,7 @@ end
 # Adapted from JuMP:
 # returns a GenericAffExpr with terms merged
 # assume that v is zero'd
-function merge_duplicates{CoefType <: JuMP.GenericAffExpr}(aff::JuMP.GenericAffExpr{CoefType,IndepNormal}, v::IndexedVector{CoefType}, counts::IndexedVector{Int}, m::Model)
+function merge_duplicates(aff::JuMP.GenericAffExpr{CoefType,IndepNormal}, v::IndexedVector{CoefType}, counts::IndexedVector{Int}, m::Model) where {CoefType <: JuMP.GenericAffExpr}
     ccdata = getCCData(m)
 
     resize!(v, ccdata.numRVs)
@@ -734,8 +734,8 @@ function merge_duplicates{CoefType <: JuMP.GenericAffExpr}(aff::JuMP.GenericAffE
     for ind in 1:length(aff.coeffs)
         addelt!(v, aff.vars[ind].idx, aff.coeffs[ind])
     end
-    vars = Array{IndepNormal}(v.nnz)
-    coeffs = Array{CoefType}(v.nnz)
+    vars = Array{IndepNormal}(undef, v.nnz)
+    coeffs = Array{CoefType}(undef, v.nnz)
     for i in 1:v.nnz
         idx = v.nzidx[i]
         vars[i] = IndepNormal(m,idx)
@@ -748,17 +748,17 @@ function merge_duplicates{CoefType <: JuMP.GenericAffExpr}(aff::JuMP.GenericAffE
 
 end
 
-function merge_duplicates{CoefType <: Number}(aff::JuMP.GenericAffExpr{CoefType,IndepNormal}, v::IndexedVector{CoefType}, m::Model)
+function merge_duplicates(aff::JuMP.GenericAffExpr{CoefType,IndepNormal}, v::IndexedVector{CoefType}, m::Model) where {CoefType <: Number}
     ccdata = getCCData(m)
 
     resize!(v, ccdata.numRVs)
     for ind in 1:length(aff.coeffs)
         var = aff.vars[ind]
-        is(var.m, m) || error("Variable does not belong to this model")
+        var.m === m || error("Variable does not belong to this model")
         addelt!(v, aff.vars[ind].idx, aff.coeffs[ind])
     end
-    vars = Array{IndepNormal}(v.nnz)
-    coeffs = Array{CoefType}(v.nnz)
+    vars = Array{IndepNormal}(undef, v.nnz)
+    coeffs = Array{CoefType}(undef, v.nnz)
     for i in 1:v.nnz
         idx = v.nzidx[i]
         vars[i] = IndepNormal(m,idx)

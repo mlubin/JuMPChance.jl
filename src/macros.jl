@@ -2,9 +2,8 @@ using Base.Meta
 
 macro indepnormal(m, x, mean, var)
     m = esc(m)
-    kwsymbol = VERSION < v"0.6.0-dev.1934" ? :kw : :(=) # changed by julia PR #19868
-    @assert isexpr(mean,kwsymbol) && mean.args[1] == :mean
-    @assert isexpr(var,kwsymbol) && var.args[1] == :var
+    @assert isexpr(mean, :(=)) && mean.args[1] == :mean
+    @assert isexpr(var, :(=)) && var.args[1] == :var
     mean = esc(mean.args[2])
     var = esc(var.args[2])
 
@@ -40,12 +39,6 @@ macro indepnormal(m, x, mean, var)
         end
     end
 end
-
-macro defIndepNormal(m, x, mean, var)
-    Base.warn_once("@defIndepNormal is deprecated. Use @indepnormal instead")
-    return :(@indepnormal($(esc(m)),$(esc(x)),$(esc(mean)),$(esc(var))))
-end
-export @defIndepNormal
 
 # Extensions to make JuMP macros work with chance constraints
 
