@@ -1,5 +1,7 @@
 name = "JuMPChance"
 uuid = "bbd82366-0c69-5eef-bed9-5a0dd17fc720"
+repo = "https://github.com/mlubin/JuMPChance.jl.git"
+version = "0.5.0"
 
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
