@@ -193,6 +193,17 @@ end
     @test string(cc.twosidechanceconstr[end]) == "-1 <= (x)*ξ + 0 <= y[1] + y[2] + y[3], with probability 0.95"
 end
 
+@testset "Non-chance constraint model" begin
+    m = ChanceModel()
+    @indepnormal(m, ξ, mean=0, var=1)
+    @variable(m, x)
+    @objective(m, Min, x)
+    @constraint(m, JuMPChance.CCAffExpr() + x >= 0, with_probability = 0.5)
+    status = solve(m, silent=true)
+    @show status == :Optimal
+    @show getvalue(x) ≈ 0.0 rtol=1e-6 atol=1e-6
+end
+
 @testset "Basic chance constraint model" begin
     for method in [:Reformulate,:Cuts]
         m = ChanceModel()

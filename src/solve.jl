@@ -2,7 +2,7 @@ import MathProgBase
 
 Φinv(x) = quantile(Normal(0,1),x)
 
-function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false, lazy_constraints::Bool=false, silent::Bool=false)
+function solvehook(m::Model; suppress_warnings=false, method=:Reformulate,linearize_objective::Bool=false,probability_tolerance=0.001,debug::Bool = false, iteration_limit::Int=60, objective_linearization_tolerance::Float64=1e-6, reformulate_quadobj_to_conic::Bool=false, lazy_constraints::Bool=false, silent::Bool=false)
     @assert method == :Reformulate || method == :Cuts
 
     ccdata = getCCData(m)
@@ -69,7 +69,7 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
                 if cc.sense == :(<=)
                     @constraint(m, ccexpr.constant <= 0)
                 else
-                    @constraint(m, ccexpr.constate >= 0)
+                    @constraint(m, ccexpr.constant >= 0)
                 end
                 continue
             elseif all(ex -> isequal(ex, coeffs[1]), coeffs)
