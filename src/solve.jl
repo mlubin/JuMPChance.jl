@@ -69,7 +69,7 @@ function solvehook(m::Model; suppress_warnings=false, method=:Refomulate,lineari
                 if cc.sense == :(<=)
                     @constraint(m, ccexpr.constant <= 0)
                 else
-                    @constraint(m, ccexpr.constate >= 0)
+                    @constraint(m, ccexpr.constant >= 0)
                 end
                 continue
             elseif all(ex -> isequal(ex, coeffs[1]), coeffs)
